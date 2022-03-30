@@ -116,3 +116,6 @@ Thumbs.db
 
 # Project exclude paths
 /desktop/out/
+/gradlew.bat
+/gradlew
+/gradle/wrapper/gradle-wrapper.jar
