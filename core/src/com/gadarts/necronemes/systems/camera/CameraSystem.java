@@ -5,15 +5,18 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.gadarts.necromine.model.GeneralUtils;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
 
+import static com.gadarts.necronemes.DefaultGameSettings.DEBUG_INPUT;
 import static com.gadarts.necronemes.DefaultGameSettings.FULL_SCREEN;
 import static com.gadarts.necronemes.Necronemes.*;
 
@@ -24,6 +27,9 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	private static final float NEAR = 0.01f;
 	private static final float START_OFFSET = 7;
 	private static final float EXTRA_LEVEL_PADDING = 16;
+	private static final Vector3 auxVector3_1 = new Vector3();
+	private static final Vector3 auxVector3_2 = new Vector3();
+	private static final Vector3 auxVector3_3 = new Vector3();
 	private final Vector2 lastMousePosition = new Vector2();
 	private final Vector2 lastRightPressMousePosition = new Vector2();
 	private boolean rotateCamera;
@@ -46,7 +52,20 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
+		if (!DEBUG_INPUT && !rotateCamera) {
+			handleCameraFollow();
+		}
 		getSystemsCommonData().getCamera().update();
+	}
+
+	private void handleCameraFollow( ) {
+		Entity player = getSystemsCommonData().getPlayer();
+		Vector3 playerPos = ComponentsMapper.characterDecal.get(player).getDecal().getPosition();
+		Camera camera = getSystemsCommonData().getCamera();
+		Vector3 rotationPoint = GeneralUtils.defineRotationPoint(auxVector3_1, camera);
+		Vector3 diff = auxVector3_2.set(playerPos).sub(rotationPoint);
+		Vector3 cameraPosDest = auxVector3_3.set(camera.position).add(diff.x, 0, diff.z);
+		camera.position.interpolate(cameraPosDest, 0.1F, Interpolation.bounce);
 	}
 
 	@Override

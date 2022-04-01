@@ -34,9 +34,19 @@ public class Necronemes extends Game {
 	public static final int FULL_SCREEN_RESOLUTION_HEIGHT = 1080;
 	public static final int WINDOWED_RESOLUTION_WIDTH = 800;
 	public static final int WINDOWED_RESOLUTION_HEIGHT = 600;
-	private final Map<Class<? extends SystemEventsSubscriber>, GameSystem<? extends SystemEventsSubscriber>> subscribersInterfaces = new HashMap<>();
+	private final Map<
+			Class<? extends SystemEventsSubscriber>,
+			GameSystem<? extends SystemEventsSubscriber>> subscribersInterfaces = new HashMap<>();
+	private final String versionName;
+	private final int versionNumber;
 	private PooledEngine engine;
 	private GameAssetsManager assetsManager;
+	private SoundPlayer soundPlayer;
+
+	public Necronemes(String versionName, int versionNumber) {
+		this.versionName = versionName;
+		this.versionNumber = versionNumber;
+	}
 
 	@Override
 	public void create( ) {
@@ -44,7 +54,8 @@ public class Necronemes extends Game {
 		engine = new PooledEngine();
 		setScreen(new BattleScreen(engine));
 		initializeAssets();
-		SystemsCommonData systemsCommonData = new SystemsCommonData();
+		soundPlayer = new SoundPlayer(assetsManager);
+		SystemsCommonData systemsCommonData = new SystemsCommonData(versionName, versionNumber);
 		systemsCommonData.setMap(new MapBuilder(engine, assetsManager).inflateTestMap("mastaba"));
 		initializeSystems(systemsCommonData);
 	}
@@ -118,7 +129,9 @@ public class Necronemes extends Game {
 		systems.forEach(system -> ((GameSystem<? extends SystemEventsSubscriber>) system).initializeData());
 		systems.forEach((system) -> {
 			GameSystem<? extends SystemEventsSubscriber> sys = (GameSystem<? extends SystemEventsSubscriber>) system;
-			subscribersInterfaces.put(sys.getEventsSubscriberClass(), sys);
+			if (sys.getEventsSubscriberClass() != null) {
+				subscribersInterfaces.put(sys.getEventsSubscriberClass(), sys);
+			}
 		});
 		systems.forEach((system) -> Arrays.stream(system.getClass().getInterfaces()).forEach(i -> {
 			if (subscribersInterfaces.containsKey(i)) {
@@ -131,10 +144,11 @@ public class Necronemes extends Game {
 	private void addSystems(SystemsCommonData systemsCommonData) {
 		List.of(new CameraSystem(systemsCommonData),
 				new InputSystem(systemsCommonData),
-				new UserInterfaceSystem(systemsCommonData, assetsManager),
+				new UserInterfaceSystem(systemsCommonData, assetsManager, soundPlayer),
 				new InputSystem(systemsCommonData),
 				new RenderSystem(systemsCommonData, assetsManager),
-				new PlayerSystem(systemsCommonData)).forEach(gameSystem -> engine.addSystem(gameSystem));
+				new PlayerSystem(systemsCommonData),
+				new ProfilingSystem(systemsCommonData)).forEach(gameSystem -> engine.addSystem(gameSystem));
 	}
 
 	@Override

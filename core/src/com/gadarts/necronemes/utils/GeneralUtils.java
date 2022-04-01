@@ -6,10 +6,16 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Plane;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
+import com.gadarts.necromine.assets.Assets;
 import com.google.gson.JsonObject;
 
 public class GeneralUtils {
 	private static final Plane floorPlane = new Plane(new Vector3(0, 1, 0), 0);
+
+	public static String getRandomRoadSound(final Assets.Sounds soundDefinition) {
+		int random = MathUtils.random(soundDefinition.getFiles().length - 1);
+		return soundDefinition.getFiles()[random];
+	}
 
 	/**
 	 * Calculates the node's position based on screen mouse position.

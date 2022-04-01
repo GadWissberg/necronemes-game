@@ -41,6 +41,13 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 			input = createMultiplexer();
 		}
 		Gdx.input.setInputProcessor(input);
+		addInputProcessor(getSystemsCommonData().getUiStage());
+	}
+
+	private void addInputProcessor(final InputProcessor inputProcessor) {
+		if (DefaultGameSettings.DEBUG_INPUT) return;
+		InputMultiplexer inputMultiplexer = (InputMultiplexer) Gdx.input.getInputProcessor();
+		inputMultiplexer.addProcessor(0, inputProcessor);
 	}
 
 	private InputProcessor createMultiplexer( ) {

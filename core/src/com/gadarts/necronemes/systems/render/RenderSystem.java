@@ -116,6 +116,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		}
 		GameModelInstance modelInstance = modelInstanceComponent.getModelInstance();
 		modelBatch.render(modelInstance);
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		systemsCommonData.setNumberOfVisible(systemsCommonData.getNumberOfVisible() + 1);
 	}
 
 	private boolean shouldSkipRenderModel(boolean renderWallsAndFloor, Entity exclude, Camera camera, Entity entity, ModelInstanceComponent modelInstanceComponent) {
@@ -128,9 +130,11 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
+		getSystemsCommonData().setNumberOfVisible(0);
 		resetDisplay(Color.BLACK);
 		renderModels(modelBatch, true);
 		renderDecals(deltaTime);
+		getSystemsCommonData().getUiStage().draw();
 	}
 
 	private void renderDecals(final float deltaTime) {
