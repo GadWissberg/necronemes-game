@@ -1,11 +1,12 @@
-package com.gadarts.necronemes.systems;
+package com.gadarts.necronemes.systems.input;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.gadarts.necronemes.DefaultGameSettings;
-import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.GameSystem;
+import com.gadarts.necronemes.systems.SystemsCommonData;
 
 public class InputSystem extends GameSystem<InputSystemEventsSubscriber> implements InputProcessor {
 	private CameraInputController debugInput;
@@ -79,18 +80,30 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 	}
 
 	@Override
-	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-		return false;
+	public boolean touchDown(final int screenX, final int screenY, final int pointer, final int button) {
+		if (DefaultGameSettings.DEBUG_INPUT) return false;
+		for (InputSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.touchDown(screenX, screenY, button);
+		}
+		return true;
 	}
 
 	@Override
-	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-		return false;
+	public boolean touchUp(final int screenX, final int screenY, final int pointer, final int button) {
+		if (DefaultGameSettings.DEBUG_INPUT) return false;
+		for (InputSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.touchUp(screenX, screenY, button);
+		}
+		return true;
 	}
 
 	@Override
-	public boolean touchDragged(int screenX, int screenY, int pointer) {
-		return false;
+	public boolean touchDragged(final int screenX, final int screenY, final int pointer) {
+		if (DefaultGameSettings.DEBUG_INPUT) return false;
+		for (InputSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.touchDragged(screenX, screenY);
+		}
+		return true;
 	}
 
 	@Override

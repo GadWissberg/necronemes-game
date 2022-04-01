@@ -5,13 +5,21 @@ import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necromine.model.characters.Direction;
+import com.gadarts.necromine.model.characters.SpriteType;
+import com.gadarts.necronemes.components.character.CharacterAnimation;
+import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.screens.BattleScreen;
 import com.gadarts.necronemes.systems.*;
 import com.gadarts.necronemes.systems.camera.CameraSystem;
+import com.gadarts.necronemes.systems.input.InputSystem;
+import com.gadarts.necronemes.systems.player.PlayerSystem;
+import com.gadarts.necronemes.systems.render.RenderSystem;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystem;
 import com.gadarts.necronemes.utils.MapBuilder;
 
@@ -44,7 +52,53 @@ public class Necronemes extends Game {
 	private void initializeAssets( ) {
 		assetsManager = new GameAssetsManager();
 		assetsManager.loadGameFiles();
+		generateCharactersAnimations();
 		applyAlphaOnModels();
+	}
+
+	private void generateCharactersAnimations( ) {
+		Arrays.stream(Assets.Atlases.values())
+				.forEach(atlas -> assetsManager.addAsset(
+						atlas.name(),
+						CharacterAnimations.class,
+						createCharacterAnimations(atlas)));
+	}
+
+	private void inflateCharacterAnimation(final CharacterAnimations animations,
+										   final TextureAtlas atlas,
+										   final SpriteType spriteType,
+										   final Direction dir) {
+		String spriteTypeName = spriteType.name().toLowerCase();
+		String name = (spriteType.isSingleAnimation()) ? spriteTypeName : spriteTypeName + "_" + dir.name().toLowerCase();
+		CharacterAnimation a = createAnimation(atlas, spriteType, name, dir);
+		if (a.getKeyFrames().length > 0) {
+			animations.put(spriteType, dir, a);
+		}
+	}
+
+	private CharacterAnimation createAnimation(final TextureAtlas atlas,
+											   final SpriteType spriteType,
+											   final String name,
+											   final Direction dir) {
+		return new CharacterAnimation(
+				spriteType.getAnimationDuration(),
+				atlas.findRegions(name),
+				spriteType.getPlayMode(),
+				dir);
+	}
+
+	private CharacterAnimations createCharacterAnimations(final Assets.Atlases zealot) {
+		CharacterAnimations animations = new CharacterAnimations();
+		TextureAtlas atlas = assetsManager.getAtlas(zealot);
+		Arrays.stream(SpriteType.values()).forEach(spriteType -> {
+			if (spriteType.isSingleAnimation()) {
+				inflateCharacterAnimation(animations, atlas, spriteType, Direction.SOUTH);
+			} else {
+				Direction[] directions = Direction.values();
+				Arrays.stream(directions).forEach(dir -> inflateCharacterAnimation(animations, atlas, spriteType, dir));
+			}
+		});
+		return animations;
 	}
 
 	private void applyAlphaOnModels( ) {
@@ -79,7 +133,8 @@ public class Necronemes extends Game {
 				new InputSystem(systemsCommonData),
 				new UserInterfaceSystem(systemsCommonData, assetsManager),
 				new InputSystem(systemsCommonData),
-				new RenderSystem(systemsCommonData)).forEach(gameSystem -> engine.addSystem(gameSystem));
+				new RenderSystem(systemsCommonData, assetsManager),
+				new PlayerSystem(systemsCommonData)).forEach(gameSystem -> engine.addSystem(gameSystem));
 	}
 
 	@Override

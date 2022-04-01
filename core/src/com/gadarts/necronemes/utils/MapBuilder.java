@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -13,24 +14,45 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.assets.MapJsonKeys;
+import com.gadarts.necromine.model.characters.CharacterDefinition;
+import com.gadarts.necromine.model.characters.CharacterTypes;
+import com.gadarts.necromine.model.characters.Direction;
+import com.gadarts.necromine.model.characters.attributes.Accuracy;
+import com.gadarts.necromine.model.characters.attributes.Agility;
+import com.gadarts.necromine.model.characters.attributes.Strength;
+import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.components.character.*;
+import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.awt.*;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.stream.IntStream;
 
+import static com.gadarts.necromine.assets.Assets.Atlases.PLAYER_GENERIC;
+import static com.gadarts.necromine.assets.Assets.Atlases.findByRelatedWeapon;
 import static com.gadarts.necromine.assets.Assets.SurfaceTextures.MISSING;
 import static com.gadarts.necromine.assets.MapJsonKeys.*;
+import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_Y;
+import static com.gadarts.necromine.model.characters.CharacterTypes.PLAYER;
+import static com.gadarts.necromine.model.characters.SpriteType.IDLE;
 import static java.lang.String.format;
 
 public class MapBuilder implements Disposable {
+	public static final int PLAYER_HEALTH = 64;
+
 	public static final String MAP_PATH_TEMP = "assets/maps/%s.json";
+	private static final CharacterSoundData auxCharacterSoundData = new CharacterSoundData();
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
 	private static final Vector3 auxVector3_3 = new Vector3();
@@ -66,9 +88,87 @@ public class MapBuilder implements Disposable {
 	 */
 	public MapGraph inflateTestMap(final String map) {
 		JsonObject mapJsonObj = gson.fromJson(Gdx.files.internal(format(MAP_PATH_TEMP, map)).reader(), JsonObject.class);
-		return createMapGraph(mapJsonObj);
+		MapGraph mapGraph = createMapGraph(mapJsonObj);
+		inflateAllElements(mapJsonObj, mapGraph);
+		return mapGraph;
 	}
 
+	private void inflateAllElements(final JsonObject mapJsonObject, final MapGraph mapGraph) {
+		inflateCharacters(mapJsonObject, mapGraph);
+	}
+
+	private Weapon initializeStartingWeapon( ) {
+		Weapon weapon = Pools.obtain(Weapon.class);
+		Texture image = assetsManager.getTexture(DefaultGameSettings.STARTING_WEAPON.getImage());
+		weapon.init(DefaultGameSettings.STARTING_WEAPON, 0, 0, image);
+		return weapon;
+	}
+
+	private Vector3 inflateCharacterPosition(final JsonElement characterJsonElement, final MapGraph mapGraph) {
+		JsonObject asJsonObject = characterJsonElement.getAsJsonObject();
+		int col = asJsonObject.get(COL).getAsInt();
+		int row = asJsonObject.get(ROW).getAsInt();
+		float floorHeight = mapGraph.getNode(col, row).getHeight();
+		return auxVector3_1.set(col + 0.5f, floorHeight + BILLBOARD_Y, row + 0.5f);
+	}
+
+	private void inflatePlayer(final JsonObject characterJsonObject, final MapGraph mapGraph) {
+		Weapon weapon = initializeStartingWeapon();
+		CharacterAnimations general = assetsManager.get(PLAYER_GENERIC.name());
+		EntityBuilder builder = EntityBuilder.beginBuildingEntity(engine).addPlayerComponent(weapon, general);
+		Vector3 position = inflateCharacterPosition(characterJsonObject, mapGraph);
+		auxCharacterSoundData.set(Assets.Sounds.PLAYER_PAIN, Assets.Sounds.PLAYER_DEATH, Assets.Sounds.STEP);
+		CharacterSkillsParameters skills = new CharacterSkillsParameters(
+				PLAYER_HEALTH,
+				Agility.HIGH,
+				new Strength(1, 3),
+				Accuracy.LOW);
+		CharacterData data = new CharacterData(
+				position,
+				Direction.values()[characterJsonObject.get(DIRECTION).getAsInt()],
+				skills,
+				auxCharacterSoundData);
+		Assets.Atlases atlas = findByRelatedWeapon(DefaultGameSettings.STARTING_WEAPON);
+		addCharBaseComponents(builder, data, CharacterTypes.PLAYER.getDefinitions()[0], atlas);
+		builder.finishAndAddToEngine();
+	}
+
+	private CharacterSpriteData createCharacterSpriteData(final CharacterData data, final CharacterDefinition def) {
+		CharacterSpriteData characterSpriteData = Pools.obtain(CharacterSpriteData.class);
+		characterSpriteData.init(data.getDirection(),
+				IDLE,
+				def.getMeleeHitFrameIndex(),
+				def.getPrimaryAttackHitFrameIndex(),
+				def.isSingleDeathAnimation());
+		return characterSpriteData;
+	}
+
+	private void addCharBaseComponents(final EntityBuilder entityBuilder,
+									   final CharacterData data,
+									   final CharacterDefinition def,
+									   final Assets.Atlases atlasDefinition) {
+		CharacterSpriteData characterSpriteData = createCharacterSpriteData(data, def);
+		Direction direction = data.getDirection();
+		entityBuilder.addCharacterComponent(characterSpriteData, data.getSoundData(), data.getSkills())
+				.addCharacterDecalComponent(assetsManager.get(atlasDefinition.name()), IDLE, direction, data.getPosition())
+				.addCollisionComponent()
+				.addAnimationComponent();
+	}
+
+	private void inflateCharacters(final JsonObject mapJsonObject, final MapGraph mapGraph) {
+		Arrays.stream(CharacterTypes.values()).forEach(type -> {
+			String typeName = type.name().toLowerCase();
+			JsonObject charactersJsonObject = mapJsonObject.getAsJsonObject(CHARACTERS);
+			if (charactersJsonObject.has(typeName)) {
+				JsonArray array = charactersJsonObject.get(typeName).getAsJsonArray();
+				array.forEach(characterJsonElement -> {
+					if (type == PLAYER) {
+						inflatePlayer((JsonObject) characterJsonElement, mapGraph);
+					}
+				});
+			}
+		});
+	}
 
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
 		return new MapGraph(

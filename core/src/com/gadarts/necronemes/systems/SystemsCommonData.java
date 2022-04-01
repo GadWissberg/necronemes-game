@@ -12,4 +12,5 @@ public class SystemsCommonData {
 	private Entity cursor;
 	private Camera camera;
 	private MapGraph map;
+	private Entity player;
 }
