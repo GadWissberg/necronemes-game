@@ -57,7 +57,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 
 	private void pathHasCreated( ) {
 		for (PlayerSystemEventsSubscriber subscriber : subscribers) {
-			subscriber.onPathCreated();
+			subscriber.onPlayerPathCreated();
 		}
 		Entity player = getSystemsCommonData().getPlayer();
 		pathPlanHandler.displayPathPlan(ComponentsMapper.character.get(player).getSkills().getAgility());

@@ -31,8 +31,11 @@ import static com.gadarts.necromine.model.characters.SpriteType.PAIN;
 import static com.gadarts.necromine.model.characters.SpriteType.RUN;
 import static com.gadarts.necronemes.components.character.CharacterMotivation.END_MY_TURN;
 import static com.gadarts.necronemes.map.MapGraphConnectionCosts.CLEAN;
+import static com.gadarts.necronemes.utils.GeneralUtils.*;
 
-public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber> implements PlayerSystemEventsSubscriber, RenderSystemEventsSubscriber {
+public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber> implements
+		PlayerSystemEventsSubscriber,
+		RenderSystemEventsSubscriber {
 	private static final int ROT_INTERVAL = 125;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector2 auxVector2_1 = new Vector2();
@@ -198,7 +201,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	@Override
-	public void onPathCreated( ) {
+	public void onPlayerPathCreated( ) {
 
 	}
 
@@ -224,9 +227,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		}
 		MapGraphNode dest = characterComponent.getDestinationNode();
 		Decal decal = ComponentsMapper.characterDecal.get(character).getDecal();
-		Vector2 position = auxVector2_1.set(decal.getX(), decal.getZ());
-		boolean reachedDestNode = position.dst2(dest.getCenterPosition(auxVector2_2)) < GeneralUtils.EPSILON;
-		if (reachedDestNode) {
+		if (auxVector2_1.set(decal.getX(), decal.getZ()).dst2(dest.getCenterPosition(auxVector2_2)) < EPSILON) {
 			reachedNodeOfPath(character, dest);
 		} else {
 			takeStep(character);
