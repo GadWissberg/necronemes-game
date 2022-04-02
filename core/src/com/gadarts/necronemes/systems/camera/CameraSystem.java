@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.gadarts.necromine.model.GeneralUtils;
+import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.systems.GameSystem;
@@ -32,10 +33,9 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	private static final Vector3 auxVector3_3 = new Vector3();
 	private final Vector2 lastMousePosition = new Vector2();
 	private final Vector2 lastRightPressMousePosition = new Vector2();
-	private boolean rotateCamera;
 
-	public CameraSystem(SystemsCommonData systemsCommonData) {
-		super(systemsCommonData);
+	public CameraSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
+		super(systemsCommonData, soundPlayer);
 	}
 
 	@Override
@@ -52,7 +52,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
-		if (!DEBUG_INPUT && !rotateCamera) {
+		if (!DEBUG_INPUT && !getSystemsCommonData().isCameraIsRotating()) {
 			handleCameraFollow();
 		}
 		getSystemsCommonData().getCamera().update();
@@ -70,7 +70,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 
 	@Override
 	public void touchDragged(final int screenX, final int screenY) {
-		if (rotateCamera) {
+		if (getSystemsCommonData().isCameraIsRotating()) {
 			Entity player = getSystemsCommonData().getPlayer();
 			Vector3 rotationPoint = ComponentsMapper.characterDecal.get(player).getDecal().getPosition();
 			Camera camera = getSystemsCommonData().getCamera();
@@ -83,7 +83,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	@Override
 	public void touchDown(final int screenX, final int screenY, final int button) {
 		if (button == Input.Buttons.RIGHT) {
-			rotateCamera = true;
+			getSystemsCommonData().setCameraIsRotating(true);
 			lastRightPressMousePosition.set(screenX, screenY);
 		}
 	}
@@ -108,7 +108,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	@Override
 	public void touchUp(final int screenX, final int screenY, final int button) {
 		if (button == Input.Buttons.RIGHT) {
-			rotateCamera = false;
+			getSystemsCommonData().setCameraIsRotating(false);
 		}
 	}
 

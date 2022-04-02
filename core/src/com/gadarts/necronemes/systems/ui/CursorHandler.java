@@ -18,17 +18,22 @@ public class CursorHandler implements Disposable {
 	public static final Color CURSOR_REGULAR = Color.YELLOW;
 	public static final Color CURSOR_UNAVAILABLE = Color.DARK_GRAY;
 	public static final Color CURSOR_ATTACK = Color.RED;
-	private static final float CURSOR_FLICKER_STEP = 1.5f;
-	private static final Vector3 auxVector3_1 = new Vector3();
 	public static final String POSITION_LABEL_FORMAT = "Row: %s , Col: %s";
 	public static final Color POSITION_LABEL_COLOR = Color.WHITE;
 	public static final float POSITION_LABEL_Y = 10F;
+	private static final float CURSOR_FLICKER_STEP = 1.5f;
+	private static final Vector3 auxVector3_1 = new Vector3();
 	private final SystemsCommonData systemsCommonData;
 	private ModelInstance cursorModelInstance;
 	private float cursorFlickerChange = CURSOR_FLICKER_STEP;
 
 	public CursorHandler(SystemsCommonData systemsCommonData) {
 		this.systemsCommonData = systemsCommonData;
+	}
+
+	MapGraphNode getCursorNode() {
+		Vector3 dest = getCursorModelInstance().transform.getTranslation(auxVector3_1);
+		return systemsCommonData.getMap().getNode((int) dest.x, (int) dest.z);
 	}
 
 	@SuppressWarnings("SameParameterValue")

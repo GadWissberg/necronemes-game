@@ -2,6 +2,7 @@ package com.gadarts.necronemes.systems.ui;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector3;
@@ -16,7 +17,6 @@ import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.GameSystem;
-import com.gadarts.necronemes.systems.SystemEventsSubscriber;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
 import com.gadarts.necronemes.utils.EntityBuilder;
@@ -24,7 +24,7 @@ import com.gadarts.necronemes.utils.EntityBuilder;
 import static com.gadarts.necronemes.DefaultGameSettings.FULL_SCREEN;
 import static com.gadarts.necronemes.Necronemes.*;
 
-public class UserInterfaceSystem extends GameSystem implements InputSystemEventsSubscriber {
+public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements InputSystemEventsSubscriber {
 	private final static BoundingBox auxBoundingBox = new BoundingBox();
 	private final static Vector3 auxVector3_2 = new Vector3();
 	private final GameAssetsManager assetsManager;
@@ -34,7 +34,7 @@ public class UserInterfaceSystem extends GameSystem implements InputSystemEvents
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
 							   GameAssetsManager assetsManager,
 							   SoundPlayer soundPlayer) {
-		super(systemsCommonData);
+		super(systemsCommonData, soundPlayer);
 		this.assetsManager = assetsManager;
 		this.soundPlayer = soundPlayer;
 	}
@@ -69,8 +69,8 @@ public class UserInterfaceSystem extends GameSystem implements InputSystemEvents
 	}
 
 	@Override
-	public Class<SystemEventsSubscriber> getEventsSubscriberClass( ) {
-		return null;
+	public Class<UserInterfaceSystemEventsSubscriber> getEventsSubscriberClass( ) {
+		return UserInterfaceSystemEventsSubscriber.class;
 	}
 
 	@Override
@@ -79,6 +79,21 @@ public class UserInterfaceSystem extends GameSystem implements InputSystemEvents
 		getSystemsCommonData().setCursor(createAndAdd3dCursor());
 		cursorHandler = new CursorHandler(getSystemsCommonData());
 		cursorHandler.init();
+	}
+
+	@Override
+	public void touchDown(final int screenX, final int screenY, final int button) {
+		if (getSystemsCommonData().isCameraIsRotating()) return;
+		if (button == Input.Buttons.LEFT && getSystemsCommonData().getCurrentCommand() == null) {
+			onUserSelectedNodeToApplyTurn();
+		}
+	}
+
+	private void onUserSelectedNodeToApplyTurn( ) {
+		MapGraphNode cursorNode = cursorHandler.getCursorNode();
+		for (UserInterfaceSystemEventsSubscriber sub : subscribers) {
+			sub.onUserSelectedNodeToApplyTurn(cursorNode);
+		}
 	}
 
 	private Entity createAndAdd3dCursor( ) {
@@ -94,8 +109,4 @@ public class UserInterfaceSystem extends GameSystem implements InputSystemEvents
 		cursorHandler.dispose();
 	}
 
-	@Override
-	public void subscribeForEvents(Object sub) {
-
-	}
 }

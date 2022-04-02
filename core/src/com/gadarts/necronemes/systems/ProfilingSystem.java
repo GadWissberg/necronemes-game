@@ -9,10 +9,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.StringBuilder;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 
 public class ProfilingSystem extends GameSystem<SystemEventsSubscriber> {
@@ -37,8 +37,8 @@ public class ProfilingSystem extends GameSystem<SystemEventsSubscriber> {
 	private String versionName;
 	private ImmutableArray<Entity> modelInstanceEntities;
 
-	public ProfilingSystem(SystemsCommonData systemsCommonData) {
-		super(systemsCommonData);
+	public ProfilingSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
+		super(systemsCommonData, soundPlayer);
 		glProfiler = new GLProfiler(Gdx.graphics);
 		stringBuilder = new StringBuilder();
 		setGlProfiler();

@@ -7,9 +7,13 @@ import com.badlogic.gdx.math.Plane;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
 import com.gadarts.necromine.assets.Assets;
+import com.gadarts.necronemes.map.GameHeuristic;
+import com.gadarts.necronemes.map.GamePathFinder;
+import com.gadarts.necronemes.map.MapGraphPath;
 import com.google.gson.JsonObject;
 
 public class GeneralUtils {
+	public static final float EPSILON = 0.025f;
 	private static final Plane floorPlane = new Plane(new Vector3(0, 1, 0), 0);
 
 	public static String getRandomRoadSound(final Assets.Sounds soundDefinition) {
@@ -56,5 +60,14 @@ public class GeneralUtils {
 			result = jsonObject.get(key).getAsFloat();
 		}
 		return result;
+	}
+
+	public static boolean calculatePath(CalculatePathRequest request, GamePathFinder pathFinder, GameHeuristic heuristic) {
+		MapGraphPath outputPath = request.getOutputPath();
+		outputPath.clear();
+		return pathFinder.searchNodePathBeforeCommand(
+				heuristic,
+				request
+		);
 	}
 }

@@ -2,6 +2,9 @@ package com.gadarts.necronemes.utils;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.math.Vector3;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
@@ -14,8 +17,11 @@ import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.player.Weapon;
+import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
 import lombok.AccessLevel;
 import lombok.Setter;
+
+import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_SCALE;
 
 public class EntityBuilder {
 	public static final String MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST = "Call beginBuildingEntity() first!";
@@ -67,6 +73,58 @@ public class EntityBuilder {
 	private void reset( ) {
 		engine = null;
 		currentEntity = null;
+	}
+
+	public EntityBuilder addSimpleDecalComponent(final Vector3 position, final Texture texture, final boolean visible) {
+		return addSimpleDecalComponent(position, texture, visible, false);
+	}
+
+	public EntityBuilder addSimpleDecalComponent(final Vector3 position,
+												 final Texture texture,
+												 final boolean visible,
+												 final boolean billboard) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		SimpleDecalComponent simpleDecalComponent = engine.createComponent(SimpleDecalComponent.class);
+		simpleDecalComponent.init(texture, visible, billboard);
+		Decal decal = simpleDecalComponent.getDecal();
+		decal.setPosition(position);
+		decal.setScale(BILLBOARD_SCALE);
+		currentEntity.add(simpleDecalComponent);
+		return instance;
+	}
+
+
+	public EntityBuilder addSimpleDecalComponent(final Vector3 position,
+												 final TextureRegion textureRegion,
+												 final boolean billboard,
+												 final boolean animatedByAnimationComponent) {
+		return addSimpleDecalComponent(position, textureRegion, Vector3.Zero, billboard, animatedByAnimationComponent);
+	}
+
+	public EntityBuilder addSimpleDecalComponent(final Vector3 position,
+												 final TextureRegion textureRegion,
+												 final Vector3 rotationAroundAxis,
+												 final boolean billboard,
+												 final boolean animatedByAnimationComponent) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		SimpleDecalComponent simpleDecalComponent = engine.createComponent(SimpleDecalComponent.class);
+		simpleDecalComponent.init(textureRegion, true, billboard, animatedByAnimationComponent);
+		Decal decal = simpleDecalComponent.getDecal();
+		initializeSimpleDecal(position, rotationAroundAxis, decal);
+		currentEntity.add(simpleDecalComponent);
+		return instance;
+	}
+
+	private void initializeSimpleDecal(final Vector3 position, final Vector3 rotationAroundAxis, final Decal decal) {
+		decal.setPosition(position);
+		decal.setScale(BILLBOARD_SCALE);
+		rotateSimpleDecal(decal, rotationAroundAxis);
+	}
+
+	private void rotateSimpleDecal(final Decal decal, final Vector3 rotationAroundAxis) {
+		if (!rotationAroundAxis.isZero()) {
+			decal.setRotation(rotationAroundAxis.y, rotationAroundAxis.x, rotationAroundAxis.z);
+		}
 	}
 
 	public EntityBuilder addAnimationComponent( ) {

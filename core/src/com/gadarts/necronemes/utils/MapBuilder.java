@@ -171,10 +171,12 @@ public class MapBuilder implements Disposable {
 	}
 
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
-		return new MapGraph(
-				GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, MapJsonKeys.AMBIENT, 0),
+		MapGraph mapGraph = new MapGraph(
+				GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, AMBIENT, 0),
 				inflateNodes(mapJsonObj.get(TILES).getAsJsonObject()),
 				engine);
+		mapGraph.init();
+		return mapGraph;
 	}
 
 	private Dimension inflateNodes(final JsonObject tilesJsonObject) {

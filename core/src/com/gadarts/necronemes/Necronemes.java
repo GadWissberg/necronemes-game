@@ -17,6 +17,7 @@ import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.screens.BattleScreen;
 import com.gadarts.necronemes.systems.*;
 import com.gadarts.necronemes.systems.camera.CameraSystem;
+import com.gadarts.necronemes.systems.character.CharacterSystem;
 import com.gadarts.necronemes.systems.input.InputSystem;
 import com.gadarts.necronemes.systems.player.PlayerSystem;
 import com.gadarts.necronemes.systems.render.RenderSystem;
@@ -142,13 +143,14 @@ public class Necronemes extends Game {
 	}
 
 	private void addSystems(SystemsCommonData systemsCommonData) {
-		List.of(new CameraSystem(systemsCommonData),
-				new InputSystem(systemsCommonData),
+		List.of(new CameraSystem(systemsCommonData, soundPlayer),
+				new InputSystem(systemsCommonData, soundPlayer),
 				new UserInterfaceSystem(systemsCommonData, assetsManager, soundPlayer),
-				new InputSystem(systemsCommonData),
-				new RenderSystem(systemsCommonData, assetsManager),
-				new PlayerSystem(systemsCommonData),
-				new ProfilingSystem(systemsCommonData)).forEach(gameSystem -> engine.addSystem(gameSystem));
+				new InputSystem(systemsCommonData, soundPlayer),
+				new RenderSystem(systemsCommonData, assetsManager, soundPlayer),
+				new PlayerSystem(systemsCommonData, assetsManager, soundPlayer),
+				new CharacterSystem(systemsCommonData, soundPlayer),
+				new ProfilingSystem(systemsCommonData, soundPlayer)).forEach(gameSystem -> engine.addSystem(gameSystem));
 	}
 
 	@Override

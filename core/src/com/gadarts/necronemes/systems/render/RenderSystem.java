@@ -18,6 +18,7 @@ import com.gadarts.necromine.model.characters.CharacterUtils;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
@@ -27,8 +28,12 @@ import com.gadarts.necronemes.components.character.CharacterSpriteData;
 import com.gadarts.necronemes.components.mi.AdditionalRenderData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
+import com.gadarts.necronemes.components.sd.RelatedDecal;
+import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+
+import java.util.List;
 
 import static com.badlogic.gdx.graphics.g2d.TextureAtlas.*;
 import static java.lang.Math.max;
@@ -44,9 +49,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private DecalBatch decalBatch;
 	private ImmutableArray<Entity> modelInstanceEntities;
 	private ImmutableArray<Entity> characterDecalsEntities;
+	private ImmutableArray<Entity> simpleDecalsEntities;
 
-	public RenderSystem(SystemsCommonData systemsCommonData, GameAssetsManager assetsManager) {
-		super(systemsCommonData);
+	public RenderSystem(SystemsCommonData systemsCommonData, GameAssetsManager assetsManager, SoundPlayer soundPlayer) {
+		super(systemsCommonData, soundPlayer);
 		this.modelBatch = new ModelBatch();
 		this.assetsManager = assetsManager;
 	}
@@ -55,6 +61,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	public void addedToEngine(Engine engine) {
 		super.addedToEngine(engine);
 		characterDecalsEntities = engine.getEntitiesFor(Family.all(CharacterDecalComponent.class).get());
+		simpleDecalsEntities = engine.getEntitiesFor(Family.all(SimpleDecalComponent.class).get());
 	}
 
 	@Override
@@ -140,7 +147,53 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private void renderDecals(final float deltaTime) {
 		Gdx.gl.glDepthMask(false);
 		renderLiveCharacters(deltaTime);
+		renderSimpleDecals();
 		Gdx.gl.glDepthMask(true);
+	}
+
+	private void renderSimpleDecals( ) {
+		for (Entity entity : simpleDecalsEntities) {
+			renderSimpleDecal(decalBatch, entity);
+		}
+		decalBatch.flush();
+	}
+
+	private void handleSimpleDecalAnimation(final Entity entity, final SimpleDecalComponent simpleDecalComponent) {
+		if (ComponentsMapper.animation.has(entity) && simpleDecalComponent.isAnimatedByAnimationComponent()) {
+			AnimationComponent animationComponent = ComponentsMapper.animation.get(entity);
+			simpleDecalComponent.getDecal().setTextureRegion(animationComponent.calculateFrame());
+		}
+	}
+
+	private void faceDecalToCamera(final SimpleDecalComponent simpleDecal, final Decal decal) {
+		if (simpleDecal.isBillboard()) {
+			Camera camera = getSystemsCommonData().getCamera();
+			decal.lookAt(auxVector3_1.set(decal.getPosition()).sub(camera.direction), camera.up);
+		}
+	}
+
+	private void renderSimpleDecal(final DecalBatch decalBatch, final Entity entity) {
+		SimpleDecalComponent simpleDecalComponent = ComponentsMapper.simpleDecal.get(entity);
+		if (simpleDecalComponent != null && simpleDecalComponent.isVisible()) {
+			if (!simpleDecalComponent.isAffectedByFow()) {
+				handleSimpleDecalAnimation(entity, simpleDecalComponent);
+				faceDecalToCamera(simpleDecalComponent, simpleDecalComponent.getDecal());
+				decalBatch.add(simpleDecalComponent.getDecal());
+				renderRelatedDecals(decalBatch, simpleDecalComponent);
+			}
+		}
+	}
+
+	private void renderRelatedDecals(final DecalBatch decalBatch, final SimpleDecalComponent hudDecal) {
+		List<RelatedDecal> relatedDecals = hudDecal.getRelatedDecals();
+		if (!relatedDecals.isEmpty()) {
+			for (RelatedDecal relatedDecal : relatedDecals) {
+				if (relatedDecal.isVisible()) {
+					faceDecalToCamera(hudDecal, relatedDecal);
+					decalBatch.add(relatedDecal);
+				}
+			}
+		}
 	}
 
 	private void renderLiveCharacters(final float deltaTime) {
@@ -148,7 +201,6 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 			initializeCharacterDecalForRendering(deltaTime, entity);
 			renderCharacterDecal(entity);
 		}
-		decalBatch.flush();
 	}
 
 	private void renderCharacterDecal(final Entity entity) {

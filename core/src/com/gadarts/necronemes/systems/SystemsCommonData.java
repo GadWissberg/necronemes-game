@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.gadarts.necronemes.map.MapGraph;
+import com.gadarts.necronemes.systems.character.CharacterCommand;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,6 +22,9 @@ public class SystemsCommonData {
 	private Entity player;
 	private int numberOfVisible;
 	private Stage uiStage;
+	private boolean cameraIsRotating;
+	@Getter
+	private CharacterCommand currentCommand;
 
 	public SystemsCommonData(String versionName, int versionNumber) {
 		this.versionName = versionName;

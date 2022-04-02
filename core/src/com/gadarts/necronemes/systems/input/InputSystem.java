@@ -5,14 +5,15 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 
 public class InputSystem extends GameSystem<InputSystemEventsSubscriber> implements InputProcessor {
 	private CameraInputController debugInput;
 
-	public InputSystem(SystemsCommonData systemsCommonData) {
-		super(systemsCommonData);
+	public InputSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
+		super(systemsCommonData, soundPlayer);
 	}
 
 	@Override
