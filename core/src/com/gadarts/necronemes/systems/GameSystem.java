@@ -2,6 +2,7 @@ package com.gadarts.necronemes.systems;
 
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.gdx.utils.Disposable;
+import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.SoundPlayer;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -16,10 +17,12 @@ public abstract class GameSystem<T extends SystemEventsSubscriber> extends Entit
 	protected final List<T> subscribers = new ArrayList<>();
 	private final SystemsCommonData systemsCommonData;
 	private final SoundPlayer soundPlayer;
+	private final GameAssetsManager assetsManager;
 
-	public GameSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
+	public GameSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
 		this.systemsCommonData = systemsCommonData;
 		this.soundPlayer = soundPlayer;
+		this.assetsManager = assetsManager;
 	}
 
 	public abstract Class<T> getEventsSubscriberClass( );

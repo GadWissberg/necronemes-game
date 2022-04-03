@@ -7,6 +7,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
@@ -14,6 +15,7 @@ import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necronemes.components.character.CharacterAnimation;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
+import com.gadarts.necronemes.components.mi.ModelBoundingBox;
 import com.gadarts.necronemes.screens.BattleScreen;
 import com.gadarts.necronemes.systems.*;
 import com.gadarts.necronemes.systems.camera.CameraSystem;
@@ -22,14 +24,16 @@ import com.gadarts.necronemes.systems.input.InputSystem;
 import com.gadarts.necronemes.systems.player.PlayerSystem;
 import com.gadarts.necronemes.systems.render.RenderSystem;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystem;
-import com.gadarts.necronemes.utils.MapBuilder;
+import com.gadarts.necronemes.map.MapBuilder;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class Necronemes extends Game {
+	public static final String BOUNDING_BOX_PREFIX = "box_";
 
 	public static final int FULL_SCREEN_RESOLUTION_WIDTH = 1920;
 	public static final int FULL_SCREEN_RESOLUTION_HEIGHT = 1080;
@@ -66,6 +70,19 @@ public class Necronemes extends Game {
 		assetsManager.loadGameFiles();
 		generateCharactersAnimations();
 		applyAlphaOnModels();
+		generateModelsBoundingBoxes();
+
+	}
+
+	private void generateModelsBoundingBoxes( ) {
+		Arrays.stream(Assets.Models.values())
+				.forEach(def -> {
+					Model model = assetsManager.get(def.getFilePath(), Model.class);
+					assetsManager.addAsset(
+							BOUNDING_BOX_PREFIX + def.getFilePath(),
+							ModelBoundingBox.class,
+							(ModelBoundingBox) model.calculateBoundingBox(new ModelBoundingBox(def)));
+				});
 	}
 
 	private void generateCharactersAnimations( ) {
@@ -143,14 +160,25 @@ public class Necronemes extends Game {
 	}
 
 	private void addSystems(SystemsCommonData systemsCommonData) {
-		List.of(new CameraSystem(systemsCommonData, soundPlayer),
-				new InputSystem(systemsCommonData, soundPlayer),
-				new UserInterfaceSystem(systemsCommonData, assetsManager, soundPlayer),
-				new InputSystem(systemsCommonData, soundPlayer),
-				new RenderSystem(systemsCommonData, assetsManager, soundPlayer),
-				new PlayerSystem(systemsCommonData, assetsManager, soundPlayer),
-				new CharacterSystem(systemsCommonData, soundPlayer),
-				new ProfilingSystem(systemsCommonData, soundPlayer)).forEach(gameSystem -> engine.addSystem(gameSystem));
+		Arrays.stream(Systems.values()).forEach(systemDefinition -> {
+			try {
+				Object system = systemDefinition.getSystemClass().getConstructors()[0].newInstance(
+						systemsCommonData,
+						soundPlayer,
+						assetsManager);
+				engine.addSystem((GameSystem<? extends SystemEventsSubscriber>) system);
+			} catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+				e.printStackTrace();
+			}
+		});
+//		List.of(new CameraSystem(systemsCommonData, soundPlayer),
+//				new InputSystem(systemsCommonData, soundPlayer),
+//				new UserInterfaceSystem(systemsCommonData, assetsManager, soundPlayer),
+//				new InputSystem(systemsCommonData, soundPlayer),
+//				new RenderSystem(systemsCommonData, assetsManager, soundPlayer),
+//				new PlayerSystem(systemsCommonData, assetsManager, soundPlayer),
+//				new CharacterSystem(systemsCommonData, soundPlayer),
+//				new ProfilingSystem(systemsCommonData, soundPlayer)).forEach(gameSystem -> engine.addSystem(gameSystem));
 	}
 
 	@Override

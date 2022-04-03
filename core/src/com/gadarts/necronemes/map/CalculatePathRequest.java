@@ -1,8 +1,5 @@
-package com.gadarts.necronemes.utils;
+package com.gadarts.necronemes.map;
 
-import com.gadarts.necronemes.map.MapGraphConnectionCosts;
-import com.gadarts.necronemes.map.MapGraphNode;
-import com.gadarts.necronemes.map.MapGraphPath;
 import lombok.Getter;
 import lombok.Setter;
 

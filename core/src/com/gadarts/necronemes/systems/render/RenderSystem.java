@@ -35,8 +35,7 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 
 import java.util.List;
 
-import static com.badlogic.gdx.graphics.g2d.TextureAtlas.*;
-import static java.lang.Math.max;
+import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 
 public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private final static Vector3 auxVector3_1 = new Vector3();
@@ -45,16 +44,14 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private final static BoundingBox auxBoundingBox = new BoundingBox();
 	private static final int DECALS_POOL_SIZE = 200;
 	private final ModelBatch modelBatch;
-	private final GameAssetsManager assetsManager;
 	private DecalBatch decalBatch;
 	private ImmutableArray<Entity> modelInstanceEntities;
 	private ImmutableArray<Entity> characterDecalsEntities;
 	private ImmutableArray<Entity> simpleDecalsEntities;
 
-	public RenderSystem(SystemsCommonData systemsCommonData, GameAssetsManager assetsManager, SoundPlayer soundPlayer) {
-		super(systemsCommonData, soundPlayer);
+	public RenderSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
+		super(systemsCommonData, soundPlayer, assetsManager);
 		this.modelBatch = new ModelBatch();
-		this.assetsManager = assetsManager;
 	}
 
 	@Override
@@ -74,8 +71,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	public void initializeData( ) {
 		modelInstanceEntities = getEngine().getEntitiesFor(Family.all(ModelInstanceComponent.class).get());
 		SystemsCommonData systemsCommonData = getSystemsCommonData();
-		GameCameraGroupStrategy groupStrategy = new GameCameraGroupStrategy(systemsCommonData.getCamera(), assetsManager);
-		this.decalBatch = new DecalBatch(DECALS_POOL_SIZE, groupStrategy);
+		GameCameraGroupStrategy strategy = new GameCameraGroupStrategy(systemsCommonData.getCamera(), getAssetsManager());
+		this.decalBatch = new DecalBatch(DECALS_POOL_SIZE, strategy);
 	}
 
 	private void resetDisplay(@SuppressWarnings("SameParameterValue") final Color color) {

@@ -32,4 +32,8 @@ public class CharacterCommand {
 		this.additionalData = additionalData;
 		return this;
 	}
+
+	public CharacterCommand init(CharacterCommand command) {
+		return init(command.type, command.getPath(), command.character, command.additionalData);
+	}
 }

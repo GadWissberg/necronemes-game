@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.GeneralUtils;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
@@ -34,8 +35,8 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	private final Vector2 lastMousePosition = new Vector2();
 	private final Vector2 lastRightPressMousePosition = new Vector2();
 
-	public CameraSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
-		super(systemsCommonData, soundPlayer);
+	public CameraSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
+		super(systemsCommonData, soundPlayer, assetsManager);
 	}
 
 	@Override

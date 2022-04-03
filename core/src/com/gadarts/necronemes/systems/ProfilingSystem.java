@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.StringBuilder;
+import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
@@ -37,8 +38,8 @@ public class ProfilingSystem extends GameSystem<SystemEventsSubscriber> {
 	private String versionName;
 	private ImmutableArray<Entity> modelInstanceEntities;
 
-	public ProfilingSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
-		super(systemsCommonData, soundPlayer);
+	public ProfilingSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
+		super(systemsCommonData, soundPlayer, assetsManager);
 		glProfiler = new GLProfiler(Gdx.graphics);
 		stringBuilder = new StringBuilder();
 		setGlProfiler();

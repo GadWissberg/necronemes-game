@@ -4,6 +4,7 @@ import com.gadarts.necronemes.systems.character.actions.ToDoAfterDestinationReac
 import lombok.Getter;
 
 public enum CharacterCommands {
+	GO_TO_PICKUP(new PickUpAction()),
 	GO_TO;
 
 	private final ToDoAfterDestinationReached toDoAfterDestinationReached;

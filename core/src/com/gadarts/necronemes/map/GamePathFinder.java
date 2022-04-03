@@ -1,10 +1,8 @@
 package com.gadarts.necronemes.map;
 
 import com.badlogic.gdx.ai.pfa.indexed.IndexedAStarPathFinder;
-import com.gadarts.necronemes.utils.CalculatePathRequest;
 
 public class GamePathFinder extends IndexedAStarPathFinder<MapGraphNode> {
-	private static final CalculatePathRequest CALCULATE_PATH_REQUEST = new CalculatePathRequest();
 	private final MapGraph map;
 
 	public GamePathFinder(final MapGraph graph) {

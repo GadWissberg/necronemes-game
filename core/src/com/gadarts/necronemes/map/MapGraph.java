@@ -1,20 +1,26 @@
 package com.gadarts.necronemes.map;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.ai.pfa.Connection;
 import com.badlogic.gdx.ai.pfa.indexed.IndexedGraph;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
+import com.gadarts.necromine.model.Coords;
 import com.gadarts.necromine.model.map.MapNodesTypes;
+import com.gadarts.necronemes.components.ComponentsMapper;
+import com.gadarts.necronemes.components.PickUpComponent;
 import com.gadarts.necronemes.utils.GeneralUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.awt.*;
-import java.util.List;
 
 public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private static final Vector3 auxVector3 = new Vector3();
@@ -30,8 +36,9 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private MapGraphConnectionCosts maxConnectionCostInSearch;
 	@Setter
 	private boolean includeEnemiesInGetConnections = true;
+	private final ImmutableArray<Entity> pickupEntities;
 
-	public MapGraph(float ambient, Dimension mapSize, PooledEngine engine) {
+	public MapGraph(Dimension mapSize, PooledEngine engine) {
 		this.mapSize = mapSize;
 		this.nodes = new Array<>(mapSize.width * mapSize.height);
 		for (int row = 0; row < mapSize.height; row++) {
@@ -39,6 +46,20 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 				nodes.add(new MapGraphNode(col, row, MapNodesTypes.values()[MapNodesTypes.PASSABLE_NODE.ordinal()], 8));
 			}
 		}
+		this.pickupEntities = engine.getEntitiesFor(Family.all(PickUpComponent.class).get());
+	}
+
+	public Entity getPickupFromNode(final MapGraphNode node) {
+		Entity result = null;
+		for (Entity pickup : pickupEntities) {
+			ModelInstance modelInstance = ComponentsMapper.modelInstance.get(pickup).getModelInstance();
+			MapGraphNode pickupNode = getNode(modelInstance.transform.getTranslation(auxVector3));
+			if (pickupNode.equals(node)) {
+				result = pickup;
+				break;
+			}
+		}
+		return result;
 	}
 
 	public MapGraphNode getRayNode(final int screenX, final int screenY, final Camera camera) {
@@ -130,45 +151,8 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		return result;
 	}
 
-	private void getThreeBehind(final MapGraphNode node, final List<MapGraphNode> output) {
-		int x = node.getCol();
-		int y = node.getRow();
-		if (y > 0) {
-			if (x > 0) {
-				output.add(getNode(x - 1, y - 1));
-			}
-			output.add(getNode(x, y - 1));
-			if (x < mapSize.width - 1) {
-				output.add(getNode(x + 1, y - 1));
-			}
-		}
-	}
-
-	public List<MapGraphNode> getNodesAround(final MapGraphNode node, final List<MapGraphNode> output) {
-		output.clear();
-		getThreeBehind(node, output);
-		getThreeInFront(node, output);
-		if (node.getCol() > 0) {
-			output.add(getNode(node.getCol() - 1, node.getRow()));
-		}
-		if (node.getCol() < mapSize.width - 1) {
-			output.add(getNode(node.getCol() + 1, node.getRow()));
-		}
-		return output;
-	}
-
-	private void getThreeInFront(final MapGraphNode node, final List<MapGraphNode> output) {
-		int x = node.getCol();
-		int y = node.getRow();
-		if (y < mapSize.height - 1) {
-			if (x > 0) {
-				output.add(getNode(x - 1, y + 1));
-			}
-			output.add(getNode(x, y + 1));
-			if (x < mapSize.width - 1) {
-				output.add(getNode(x + 1, y + 1));
-			}
-		}
+	public MapGraphNode getNode(final Coords coord) {
+		return getNode(coord.getCol(), coord.getRow());
 	}
 
 	private boolean isDiagonalBlockedWithEastOrWest(final MapGraphNode source, final int col) {

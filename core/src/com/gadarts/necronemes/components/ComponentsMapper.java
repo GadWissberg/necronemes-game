@@ -7,6 +7,7 @@ import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
+import com.gadarts.necronemes.systems.PickupSystem;
 
 /**
  * Easy to access component mappers.
@@ -19,5 +20,6 @@ public class ComponentsMapper {
 	public static final ComponentMapper<PlayerComponent> player = ComponentMapper.getFor(PlayerComponent.class);
 	public static final ComponentMapper<CharacterDecalComponent> characterDecal = ComponentMapper.getFor(CharacterDecalComponent.class);
 	public static final ComponentMapper<SimpleDecalComponent> simpleDecal = ComponentMapper.getFor(SimpleDecalComponent.class);
+	public static final ComponentMapper<PickUpComponent> pickup = ComponentMapper.getFor(PickUpComponent.class);
 }
 

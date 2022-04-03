@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.utils;
+package com.gadarts.necronemes.map;
 
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.Gdx;
@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
@@ -17,18 +18,21 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
-import com.gadarts.necromine.assets.MapJsonKeys;
+import com.gadarts.necromine.model.Coords;
 import com.gadarts.necromine.model.characters.CharacterDefinition;
 import com.gadarts.necromine.model.characters.CharacterTypes;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.attributes.Accuracy;
 import com.gadarts.necromine.model.characters.attributes.Agility;
 import com.gadarts.necromine.model.characters.attributes.Strength;
+import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.components.character.CharacterData;
 import com.gadarts.necronemes.components.character.*;
-import com.gadarts.necronemes.components.player.Weapon;
-import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
+import com.gadarts.necronemes.components.mi.ModelBoundingBox;
+import com.gadarts.necronemes.components.player.Weapon;
+import com.gadarts.necronemes.utils.EntityBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -46,6 +50,7 @@ import static com.gadarts.necromine.assets.MapJsonKeys.*;
 import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_Y;
 import static com.gadarts.necromine.model.characters.CharacterTypes.PLAYER;
 import static com.gadarts.necromine.model.characters.SpriteType.IDLE;
+import static com.gadarts.necronemes.Necronemes.BOUNDING_BOX_PREFIX;
 import static java.lang.String.format;
 
 public class MapBuilder implements Disposable {
@@ -59,6 +64,8 @@ public class MapBuilder implements Disposable {
 	private static final Vector3 auxVector3_4 = new Vector3();
 	private static final Vector3 auxVector3_5 = new Vector3();
 	private final static BoundingBox auxBoundingBox = new BoundingBox();
+	private static final String KEY_PICKUPS = "pickups";
+	private static final String REGION_NAME_BULLET = "bullet";
 	private final Model floorModel;
 	private final PooledEngine engine;
 	private final GameAssetsManager assetsManager;
@@ -95,6 +102,43 @@ public class MapBuilder implements Disposable {
 
 	private void inflateAllElements(final JsonObject mapJsonObject, final MapGraph mapGraph) {
 		inflateCharacters(mapJsonObject, mapGraph);
+		inflatePickups(mapJsonObject, mapGraph);
+	}
+
+	private void inflatePickups(final JsonObject mapJsonObject, final MapGraph mapGraph) {
+		JsonArray pickups = mapJsonObject.getAsJsonArray(KEY_PICKUPS);
+		pickups.forEach(element -> {
+			JsonObject pickJsonObject = element.getAsJsonObject();
+			WeaponsDefinitions type = WeaponsDefinitions.valueOf(pickJsonObject.get(TYPE).getAsString());
+			TextureAtlas.AtlasRegion bulletRegion = null;
+			if (!type.isMelee()) {
+				bulletRegion = assetsManager.getAtlas(findByRelatedWeapon(type)).findRegion(REGION_NAME_BULLET);
+			}
+			inflatePickupEntity(pickJsonObject, type, bulletRegion, mapGraph);
+		});
+	}
+
+	private void inflatePickupEntity(final JsonObject pickJsonObject,
+									 final WeaponsDefinitions type,
+									 final TextureAtlas.AtlasRegion bulletRegion,
+									 final MapGraph mapGraph) {
+		EntityBuilder builder = EntityBuilder.beginBuildingEntity(engine);
+		inflatePickupModel(builder, pickJsonObject, type, mapGraph);
+		builder.addPickUpComponentAsWeapon(type, assetsManager.getTexture(type.getImage()), bulletRegion)
+				.finishAndAddToEngine();
+	}
+
+	private void inflatePickupModel(final EntityBuilder builder,
+									final JsonObject pickJsonObject,
+									final WeaponsDefinitions type, final MapGraph mapGraph) {
+		Coords coord = new Coords(pickJsonObject.get(ROW).getAsInt(), pickJsonObject.get(COL).getAsInt());
+		Assets.Models modelDefinition = type.getModelDefinition();
+		String fileName = BOUNDING_BOX_PREFIX + modelDefinition.getFilePath();
+		ModelBoundingBox boundingBox = assetsManager.get(fileName, ModelBoundingBox.class);
+		GameModelInstance modelInstance = new GameModelInstance(assetsManager.getModel(modelDefinition), boundingBox);
+		modelInstance.transform.setTranslation(auxVector3_1.set(coord.getCol() + 0.5f, 0, coord.getRow() + 0.5f));
+		modelInstance.transform.translate(0, mapGraph.getNode(coord).getHeight(), 0);
+		builder.addModelInstanceComponent(modelInstance, true);
 	}
 
 	private Weapon initializeStartingWeapon( ) {
@@ -171,10 +215,7 @@ public class MapBuilder implements Disposable {
 	}
 
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
-		MapGraph mapGraph = new MapGraph(
-				GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, AMBIENT, 0),
-				inflateNodes(mapJsonObj.get(TILES).getAsJsonObject()),
-				engine);
+		MapGraph mapGraph = new MapGraph(inflateNodes(mapJsonObj.get(TILES).getAsJsonObject()), engine);
 		mapGraph.init();
 		return mapGraph;
 	}

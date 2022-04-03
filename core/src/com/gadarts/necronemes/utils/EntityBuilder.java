@@ -3,18 +3,24 @@ package com.gadarts.necronemes.utils;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
+import com.gadarts.necromine.model.pickups.ItemDefinition;
+import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.components.FloorComponent;
+import com.gadarts.necronemes.components.PickUpComponent;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
 import com.gadarts.necronemes.components.collision.CollisionComponent;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
+import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
@@ -33,6 +39,18 @@ public class EntityBuilder {
 	public static EntityBuilder beginBuildingEntity(final PooledEngine engine) {
 		instance.init(engine);
 		return instance;
+	}
+
+	private Item addPickUpComponent(final Class<? extends Item> type,
+									final ItemDefinition definition,
+									final Texture displayImage) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		Item pickup = Pools.obtain(type);
+		pickup.init(definition, 0, 0, displayImage);
+		PickUpComponent pickupComponent = engine.createComponent(PickUpComponent.class);
+		pickupComponent.setItem(pickup);
+		currentEntity.add(pickupComponent);
+		return pickup;
 	}
 
 	public EntityBuilder addModelInstanceComponent(final GameModelInstance modelInstance, final boolean visible) {
@@ -54,6 +72,15 @@ public class EntityBuilder {
 		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
 		FloorComponent floorComponent = engine.createComponent(FloorComponent.class);
 		currentEntity.add(floorComponent);
+		return instance;
+	}
+
+	public EntityBuilder addPickUpComponentAsWeapon(final WeaponsDefinitions definition,
+													final Texture displayImage,
+													final TextureAtlas.AtlasRegion bulletRegion) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		Weapon weapon = (Weapon) addPickUpComponent(Weapon.class, definition, displayImage);
+		weapon.setBulletTextureRegion(bulletRegion);
 		return instance;
 	}
 

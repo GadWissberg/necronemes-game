@@ -5,11 +5,15 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
+import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
+import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.player.PlayerComponent;
+import com.gadarts.necronemes.components.player.PlayerStorage;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphConnectionCosts;
 import com.gadarts.necronemes.map.MapGraphNode;
@@ -17,22 +21,30 @@ import com.gadarts.necronemes.map.MapGraphPath;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.character.CharacterCommand;
+import com.gadarts.necronemes.systems.character.CharacterSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
-import com.gadarts.necronemes.utils.CalculatePathRequest;
+import com.gadarts.necronemes.map.CalculatePathRequest;
 import com.gadarts.necronemes.utils.GeneralUtils;
 
 import static com.gadarts.necronemes.systems.character.CharacterCommands.GO_TO;
+import static com.gadarts.necronemes.systems.character.CharacterCommands.GO_TO_PICKUP;
 
-public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> implements UserInterfaceSystemEventsSubscriber {
+public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> implements UserInterfaceSystemEventsSubscriber, CharacterSystemEventsSubscriber {
 	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final CalculatePathRequest request = new CalculatePathRequest();
 	private static final CharacterCommand auxCommand = new CharacterCommand();
-	private final GameAssetsManager assetsManager;
-	private PathPlanHandler pathPlanHandler;
+	private final static Vector3 auxVector3 = new Vector3();
+	private PathPlanHandler playerPathPlanner;
 
-	public PlayerSystem(SystemsCommonData systemsCommonData, GameAssetsManager assetsManager, SoundPlayer soundPlayer) {
-		super(systemsCommonData, soundPlayer);
-		this.assetsManager = assetsManager;
+	public PlayerSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
+		super(systemsCommonData, soundPlayer, assetsManager);
+	}
+
+	@Override
+	public void onItemPickedUp(final Entity itemPickedUp) {
+		PlayerStorage storage = ComponentsMapper.player.get(getSystemsCommonData().getPlayer()).getStorage();
+		storage.addItem(ComponentsMapper.pickup.get(itemPickedUp).getItem());
+		getSoundPlayer().playSound(Assets.Sounds.PICKUP);
 	}
 
 	@Override
@@ -41,8 +53,8 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	private void applyPlayerTurn(final MapGraphNode cursorNode) {
-		int pathSize = pathPlanHandler.getCurrentPath().getCount();
-		if (!pathPlanHandler.getCurrentPath().nodes.isEmpty() && pathPlanHandler.getCurrentPath().get(pathSize - 1).equals(cursorNode)) {
+		int pathSize = playerPathPlanner.getCurrentPath().getCount();
+		if (!playerPathPlanner.getCurrentPath().nodes.isEmpty() && playerPathPlanner.getCurrentPath().get(pathSize - 1).equals(cursorNode)) {
 			applyPlayerCommandAccordingToPlan();
 		} else {
 			planPath(cursorNode);
@@ -60,23 +72,50 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 			subscriber.onPlayerPathCreated();
 		}
 		Entity player = getSystemsCommonData().getPlayer();
-		pathPlanHandler.displayPathPlan(ComponentsMapper.character.get(player).getSkills().getAgility());
+		playerPathPlanner.displayPathPlan(ComponentsMapper.character.get(player).getSkills().getAgility());
 	}
 
 	private boolean calculatePathAccordingToSelection(final MapGraphNode cursorNode) {
 		CharacterDecalComponent charDecalComp = ComponentsMapper.characterDecal.get(getSystemsCommonData().getPlayer());
-		MapGraphPath plannedPath = pathPlanHandler.getCurrentPath();
+		MapGraphPath plannedPath = playerPathPlanner.getCurrentPath();
+		initializePathPlanRequest(cursorNode, charDecalComp, plannedPath);
+		return GeneralUtils.calculatePath(request, playerPathPlanner.getPathFinder(), playerPathPlanner.getHeuristic());
+	}
+
+	private void initializePathPlanRequest(MapGraphNode cursorNode,
+										   CharacterDecalComponent charDecalComp,
+										   MapGraphPath plannedPath) {
 		request.setSourceNode(getSystemsCommonData().getMap().getNode(charDecalComp.getNodePosition(auxVector2_1)));
 		request.setDestNode(cursorNode);
 		request.setOutputPath(plannedPath);
 		request.setAvoidCharactersInCalculations(true);
 		request.setMaxCostInclusive(MapGraphConnectionCosts.CLEAN);
-		return (GeneralUtils.calculatePath(request, pathPlanHandler.getPathFinder(), pathPlanHandler.getHeuristic()));
 	}
 
 	private void applyPlayerCommandAccordingToPlan( ) {
-		pathPlanHandler.hideAllArrows();
-		applyGoToCommand(pathPlanHandler.getCurrentPath());
+		playerPathPlanner.hideAllArrows();
+		SystemsCommonData commonData = getSystemsCommonData();
+		CharacterDecalComponent charDecalComp = ComponentsMapper.characterDecal.get(commonData.getPlayer());
+		MapGraphNode playerNode = commonData.getMap().getNode(charDecalComp.getNodePosition(auxVector2_1));
+		if (commonData.getItemToPickup() != null || isPickupAndPlayerOnSameNode(commonData.getMap(), playerNode)) {
+			applyGoToPickupCommand(playerPathPlanner.getCurrentPath(), commonData.getItemToPickup());
+		} else {
+			applyGoToCommand(playerPathPlanner.getCurrentPath());
+		}
+	}
+
+	private boolean isPickupAndPlayerOnSameNode(MapGraph map, MapGraphNode playerNode) {
+		if (getSystemsCommonData().getCurrentHighLightedPickup() == null) return false;
+		Entity p = getSystemsCommonData().getCurrentHighLightedPickup();
+		GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(p).getModelInstance();
+		Vector3 pickupPosition = modelInstance.transform.getTranslation(auxVector3);
+		return map.getNode(pickupPosition).equals(playerNode);
+	}
+
+	private void applyGoToPickupCommand(final MapGraphPath path, final Entity itemToPickup) {
+		Entity player = getSystemsCommonData().getPlayer();
+		auxCommand.init(GO_TO_PICKUP, path, player, itemToPickup);
+		subscribers.forEach(sub -> sub.onPlayerAppliedCommand(auxCommand, player));
 	}
 
 	private void applyGoToCommand(final MapGraphPath path) {
@@ -97,8 +136,8 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 
 	@Override
 	public void initializeData( ) {
-		pathPlanHandler = new PathPlanHandler(assetsManager, getSystemsCommonData().getMap());
-		pathPlanHandler.init((PooledEngine) getEngine());
+		playerPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());
+		playerPathPlanner.init((PooledEngine) getEngine());
 
 	}
 

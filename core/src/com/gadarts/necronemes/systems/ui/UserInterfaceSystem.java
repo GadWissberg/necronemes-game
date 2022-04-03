@@ -27,16 +27,15 @@ import static com.gadarts.necronemes.Necronemes.*;
 public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements InputSystemEventsSubscriber {
 	private final static BoundingBox auxBoundingBox = new BoundingBox();
 	private final static Vector3 auxVector3_2 = new Vector3();
-	private final GameAssetsManager assetsManager;
 	private final SoundPlayer soundPlayer;
 	private CursorHandler cursorHandler;
 
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
-							   GameAssetsManager assetsManager,
-							   SoundPlayer soundPlayer) {
-		super(systemsCommonData, soundPlayer);
-		this.assetsManager = assetsManager;
+							   SoundPlayer soundPlayer,
+							   GameAssetsManager assetsManager) {
+		super(systemsCommonData, soundPlayer, assetsManager);
 		this.soundPlayer = soundPlayer;
+		createUiStage();
 	}
 
 	private void createUiStage( ) {
@@ -75,7 +74,6 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 
 	@Override
 	public void initializeData( ) {
-		createUiStage();
 		getSystemsCommonData().setCursor(createAndAdd3dCursor());
 		cursorHandler = new CursorHandler(getSystemsCommonData());
 		cursorHandler.init();
@@ -97,7 +95,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	}
 
 	private Entity createAndAdd3dCursor( ) {
-		Model model = assetsManager.getModel(Assets.Models.CURSOR);
+		Model model = getAssetsManager().getModel(Assets.Models.CURSOR);
 		model.calculateBoundingBox(auxBoundingBox);
 		return EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
 				.addModelInstanceComponent(new GameModelInstance(model, auxBoundingBox, false), true, false)

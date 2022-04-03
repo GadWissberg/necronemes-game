@@ -25,6 +25,8 @@ public class SystemsCommonData {
 	private boolean cameraIsRotating;
 	@Getter
 	private CharacterCommand currentCommand;
+	private Entity currentHighLightedPickup;
+	private Entity itemToPickup;
 
 	public SystemsCommonData(String versionName, int versionNumber) {
 		this.versionName = versionName;

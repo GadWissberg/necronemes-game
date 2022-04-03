@@ -1,22 +1,23 @@
 package com.gadarts.necronemes.systems.character;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.characters.CharacterTypes;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.attributes.Agility;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
+import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
-import com.gadarts.necronemes.components.character.CharacterComponent;
-import com.gadarts.necronemes.components.character.CharacterRotationData;
-import com.gadarts.necronemes.components.character.CharacterSpriteData;
+import com.gadarts.necronemes.components.character.*;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphConnection;
 import com.gadarts.necronemes.map.MapGraphNode;
@@ -25,13 +26,12 @@ import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
-import com.gadarts.necronemes.utils.GeneralUtils;
 
-import static com.gadarts.necromine.model.characters.SpriteType.PAIN;
-import static com.gadarts.necromine.model.characters.SpriteType.RUN;
+import static com.gadarts.necromine.model.characters.SpriteType.*;
 import static com.gadarts.necronemes.components.character.CharacterMotivation.END_MY_TURN;
+import static com.gadarts.necronemes.components.character.CharacterMotivation.TO_PICK_UP;
 import static com.gadarts.necronemes.map.MapGraphConnectionCosts.CLEAN;
-import static com.gadarts.necronemes.utils.GeneralUtils.*;
+import static com.gadarts.necronemes.utils.GeneralUtils.EPSILON;
 
 public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber> implements
 		PlayerSystemEventsSubscriber,
@@ -45,8 +45,8 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	private static final float CHARACTER_STEP_SIZE = 0.22f;
 	private final MapGraphPath currentPath = new MapGraphPath();
 
-	public CharacterSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer) {
-		super(systemsCommonData, soundPlayer);
+	public CharacterSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
+		super(systemsCommonData, soundPlayer, assetsManager);
 	}
 
 	@Override
@@ -144,9 +144,40 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		getSystemsCommonData().setCurrentCommand(null);
 	}
 
+	private void handleModeWithNonLoopingAnimation(final Entity character) {
+		AnimationComponent animationComponent = ComponentsMapper.animation.get(character);
+		Animation<TextureAtlas.AtlasRegion> animation = animationComponent.getAnimation();
+		if (animation.isAnimationFinished(animationComponent.getStateTime())) {
+			SpriteType spriteType = ComponentsMapper.character.get(character).getCharacterSpriteData().getSpriteType();
+			if (spriteType.isAddReverse()) {
+				handleAnimationReverse(character, animationComponent, animation, spriteType);
+			} else {
+				commandDone(character);
+			}
+		}
+	}
+
+	private void handleAnimationReverse(Entity character,
+										AnimationComponent animationComponent,
+										Animation<TextureAtlas.AtlasRegion> animation,
+										SpriteType spriteType) {
+		if (animationComponent.isDoingReverse()) {
+			commandDone(character);
+			animation.setPlayMode(Animation.PlayMode.NORMAL);
+		} else {
+			animation.setPlayMode(Animation.PlayMode.REVERSED);
+			animation.setFrameDuration(spriteType.getAnimationDuration());
+			animationComponent.resetStateTime();
+		}
+		animationComponent.setDoingReverse(!animationComponent.isDoingReverse());
+	}
+
 	private void handleCurrentCommand(final CharacterCommand currentCommand) {
 		CharacterComponent characterComponent = ComponentsMapper.character.get(currentCommand.getCharacter());
-		if (characterComponent.getMotivationData().getMotivation() == END_MY_TURN) {
+		SpriteType spriteType = characterComponent.getCharacterSpriteData().getSpriteType();
+		if (spriteType == PICKUP) {
+			handleModeWithNonLoopingAnimation(currentCommand.getCharacter());
+		} else if (characterComponent.getMotivationData().getMotivation() == END_MY_TURN) {
 			commandDone(currentCommand.getCharacter());
 		} else {
 			handleRotation(currentCommand.getCharacter(), characterComponent);
@@ -162,14 +193,6 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		return Direction.findDirection(directionToDest);
 	}
 
-	private void rotate(final CharacterComponent charComponent, final Direction directionToDest) {
-		CharacterSpriteData characterSpriteData = charComponent.getCharacterSpriteData();
-		Vector2 currentDirVector = characterSpriteData.getFacingDirection().getDirection(auxVector2_1);
-		int side;
-		float diff = directionToDest.getDirection(auxVector2_2).angleDeg() - currentDirVector.angleDeg();
-		side = auxVector2_3.set(1, 0).setAngleDeg(diff).angleDeg() > 180 ? -1 : 1;
-		characterSpriteData.setFacingDirection(Direction.findDirection(currentDirVector.rotateDeg(45f * side)));
-	}
 
 	private void handleRotation(final Entity character, final CharacterComponent charComponent) {
 		if (charComponent.getCharacterSpriteData().getSpriteType() == PAIN) return;
@@ -178,21 +201,40 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 			for (CharacterSystemEventsSubscriber subscriber : subscribers) {
 				subscriber.onCharacterRotated(character);
 			}
-			rotationData.setLastRotation(TimeUtils.millis());
-			Direction directionToDest = calculateDirectionToDestination(character);
-			if (charComponent.getCharacterSpriteData().getFacingDirection() != directionToDest) {
-				rotate(charComponent, directionToDest);
-			} else {
-				rotationDone(rotationData, charComponent.getCharacterSpriteData());
-			}
+			Direction directionToDest = initializeRotation(character, charComponent, rotationData);
+			rotate(charComponent, rotationData, directionToDest);
 		}
+	}
+
+	private void rotate(CharacterComponent charComponent, CharacterRotationData rotationData, Direction directionToDest) {
+		if (charComponent.getCharacterSpriteData().getFacingDirection() != directionToDest) {
+			CharacterSpriteData characterSpriteData = charComponent.getCharacterSpriteData();
+			Vector2 currentDirVector = characterSpriteData.getFacingDirection().getDirection(auxVector2_1);
+			float diff = directionToDest.getDirection(auxVector2_2).angleDeg() - currentDirVector.angleDeg();
+			int side = auxVector2_3.set(1, 0).setAngleDeg(diff).angleDeg() > 180 ? -1 : 1;
+			characterSpriteData.setFacingDirection(Direction.findDirection(currentDirVector.rotateDeg(45f * side)));
+		} else {
+			rotationDone(rotationData, charComponent.getCharacterSpriteData());
+		}
+	}
+
+	private Direction initializeRotation(Entity character, CharacterComponent charComponent, CharacterRotationData rotationData) {
+		rotationData.setLastRotation(TimeUtils.millis());
+		Direction directionToDest;
+		if (charComponent.getMotivationData().getMotivation() == TO_PICK_UP) {
+			directionToDest = charComponent.getCharacterSpriteData().getFacingDirection();
+		} else {
+			directionToDest = calculateDirectionToDestination(character);
+		}
+		return directionToDest;
 	}
 
 	private void rotationDone(CharacterRotationData rotationData, CharacterSpriteData characterSpriteData) {
 		rotationData.setRotating(false);
-		SpriteType spriteType;
-		spriteType = RUN;
-		characterSpriteData.setSpriteType(spriteType);
+		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
+		CharacterComponent characterComponent = ComponentsMapper.character.get(currentCommand.getCharacter());
+		boolean isPickup = characterComponent.getMotivationData().getMotivation() == TO_PICK_UP;
+		characterSpriteData.setSpriteType(isPickup ? PICKUP : RUN);
 	}
 
 	@Override
@@ -207,7 +249,19 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 
 	@Override
 	public void onPlayerAppliedCommand(CharacterCommand command, Entity player) {
-		applyCommand(auxCommand.init(CharacterCommands.GO_TO, command.getPath(), player), player);
+		auxCommand.init(command);
+		applyCommand(auxCommand, player);
+	}
+
+	private void handlePickup(final Entity character) {
+		CharacterMotivation mode = ComponentsMapper.character.get(character).getMotivationData().getMotivation();
+		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
+		if (mode == TO_PICK_UP && currentCommand.getAdditionalData() != null) {
+			Entity itemPickedUp = (Entity) currentCommand.getAdditionalData();
+			for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+				subscriber.onItemPickedUp(itemPickedUp);
+			}
+		}
 	}
 
 	@Override
@@ -216,6 +270,10 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		CharacterSpriteData characterSpriteData = characterComponent.getCharacterSpriteData();
 		if (characterSpriteData.getSpriteType() == RUN) {
 			applyRunning(character, newFrame, characterComponent);
+		} else if (characterSpriteData.getSpriteType() == PICKUP) {
+			if (newFrame.index == 1 && ComponentsMapper.animation.get(character).isDoingReverse()) {
+				handlePickup(character);
+			}
 		}
 	}
 
