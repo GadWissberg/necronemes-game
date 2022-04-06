@@ -158,7 +158,6 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	public void initializeData() {
 		playerPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());
 		playerPathPlanner.init((PooledEngine) getEngine());
-
 	}
 
 	@Override
