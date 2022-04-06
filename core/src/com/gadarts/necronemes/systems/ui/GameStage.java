@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.NinePatch;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
@@ -24,6 +25,29 @@ public class GameStage extends Stage {
 	public GameStage(final FitViewport fitViewport, final SoundPlayer soundPlayer) {
 		super(fitViewport);
 		this.soundPlayer = soundPlayer;
+		addListener(event -> {
+			boolean result = false;
+			if (event instanceof GameWindowEvent) {
+				GameWindowEvent gameWindowEvent = (GameWindowEvent) event;
+				if (gameWindowEvent.getType() == GameWindowEventType.WINDOW_CLOSED) {
+					Actor window = gameWindowEvent.getTarget();
+					window.setVisible(false);
+					result = true;
+				}
+			}
+			return result;
+		});
+	}
+
+	public boolean hasOpenWindows() {
+		boolean result = false;
+		for (GameWindow window : windows) {
+			if (window.isVisible()) {
+				result = true;
+				break;
+			}
+		}
+		return result;
 	}
 
 	private void createStorageWindow(GameAssetsManager assetsManager,

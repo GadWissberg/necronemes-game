@@ -132,7 +132,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 
 	@Override
 	public void touchDown(final int screenX, final int screenY, final int button) {
-		if (getSystemsCommonData().isCameraIsRotating()) return;
+		if (getSystemsCommonData().isCameraIsRotating() || getSystemsCommonData().getUiStage().hasOpenWindows()) return;
 		if (button == Input.Buttons.LEFT && getSystemsCommonData().getCurrentCommand() == null) {
 			onUserSelectedNodeToApplyTurn();
 		}

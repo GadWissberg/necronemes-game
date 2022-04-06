@@ -53,7 +53,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
-		if (!DEBUG_INPUT && !getSystemsCommonData().isCameraIsRotating()) {
+		if (!DEBUG_INPUT && !getSystemsCommonData().getUiStage().hasOpenWindows() && !getSystemsCommonData().isCameraIsRotating()) {
 			handleCameraFollow();
 		}
 		getSystemsCommonData().getCamera().update();
