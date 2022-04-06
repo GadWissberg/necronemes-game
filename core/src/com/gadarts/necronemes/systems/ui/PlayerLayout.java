@@ -10,7 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.gadarts.necronemes.systems.player.PlayerStorage;
+import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.components.player.Weapon;
 import lombok.Getter;
 
@@ -29,7 +29,8 @@ public class PlayerLayout extends ItemsTable {
 	public PlayerLayout(Texture texture,
 						Weapon weaponChoice,
 						ItemSelectionHandler itemSelectionHandler,
-						PlayerStorage storage, List<UserInterfaceSystemEventsSubscriber> subscribers) {
+						SystemsCommonData systemsCommonData,
+						List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		super(itemSelectionHandler);
 		this.weaponChoice = new ItemDisplay(weaponChoice, this.itemSelectionHandler, PlayerLayout.class);
 		setTouchable(Touchable.enabled);
@@ -38,7 +39,7 @@ public class PlayerLayout extends ItemsTable {
 		addListener(event -> {
 			boolean result = false;
 			if (event instanceof GameWindowEvent) {
-				result = onGameWindowEvent(event, storage, subscribers);
+				result = onGameWindowEvent(event, systemsCommonData, subscribers);
 			}
 			return result;
 		});
@@ -81,7 +82,7 @@ public class PlayerLayout extends ItemsTable {
 	}
 
 	private boolean onGameWindowEvent(Event event,
-									  PlayerStorage storage,
+									  SystemsCommonData systemsCommonData,
 									  List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		GameWindowEventType type = ((GameWindowEvent) event).getType();
 		boolean result = false;
@@ -89,7 +90,7 @@ public class PlayerLayout extends ItemsTable {
 			ItemsTable itemsTable = (ItemsTable) event.getTarget();
 			ItemDisplay selection = itemSelectionHandler.getSelection();
 			if (event.getTarget() instanceof PlayerLayout) {
-				applySelectionToSelectedWeapon(itemsTable, selection, storage, subscribers);
+				applySelectionToSelectedWeapon(itemsTable, selection, subscribers);
 			} else {
 				if (selection == weaponChoice) {
 					removeItem(selection);
@@ -102,7 +103,6 @@ public class PlayerLayout extends ItemsTable {
 
 	void applySelectionToSelectedWeapon(ItemsTable itemsTableToRemoveFrom,
 										ItemDisplay selection,
-										PlayerStorage storage,
 										List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		itemsTableToRemoveFrom.removeItem(selection);
 		PlayerLayout.this.weaponChoice = selection;

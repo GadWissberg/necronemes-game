@@ -2,16 +2,16 @@ package com.gadarts.necronemes.systems.ui;
 
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
-import com.gadarts.necronemes.SoundPlayer;
-import com.gadarts.necronemes.systems.player.PlayerStorage;
+
+import java.util.List;
 
 enum StorageWindowOnEvents {
 
-	ITEM_SELECTED(GameWindowEventType.ITEM_SELECTED, (event, soundPlayer, selectedItem, toBeAppliedOn, storage) -> {
-		soundPlayer.playSound(Assets.Sounds.UI_ITEM_SELECT);
-		ItemDisplay target = (ItemDisplay) event.getTarget();
-		StorageWindow storageWindow = (StorageWindow) toBeAppliedOn;
-		if (selectedItem.getSelection() != target) {
+	ITEM_SELECTED(GameWindowEventType.ITEM_SELECTED, (parameters) -> {
+		parameters.getSoundPlayer().playSound(Assets.Sounds.UI_ITEM_SELECT);
+		ItemDisplay target = (ItemDisplay) parameters.getWindowEvent().getTarget();
+		StorageWindow storageWindow = (StorageWindow) parameters.getTarget();
+		if (parameters.getSelectedItem().getSelection() != target) {
 			storageWindow.applySelectedItem(target);
 		} else {
 			storageWindow.clearSelectedItem();
@@ -19,30 +19,31 @@ enum StorageWindowOnEvents {
 		return false;
 	}),
 
-	ITEM_PLACED(GameWindowEventType.ITEM_PLACED, (event, soundPlayer, selectedItem, toBeAppliedOn, storage) -> {
-		StorageWindow storageWindow = (StorageWindow) toBeAppliedOn;
-		soundPlayer.playSound(Assets.Sounds.UI_ITEM_PLACED);
-		if (event.getTarget() instanceof PlayerLayout) {
-			storageWindow.findActor(StorageGrid.NAME).notify(event, false);
+	ITEM_PLACED(GameWindowEventType.ITEM_PLACED, (parameters) -> {
+		parameters.getSoundPlayer().playSound(Assets.Sounds.UI_ITEM_PLACED);
+		StorageWindow storageWindow = (StorageWindow) parameters.getTarget();
+		if (parameters.getWindowEvent().getTarget() instanceof PlayerLayout) {
+			storageWindow.findActor(StorageGrid.NAME).notify(parameters.getWindowEvent(), false);
 		} else {
-			storageWindow.findActor(PlayerLayout.NAME).notify(event, false);
+			storageWindow.findActor(PlayerLayout.NAME).notify(parameters.getWindowEvent(), false);
 		}
 		storageWindow.clearSelectedItem();
 		return true;
 	}),
 
-	CLICK_RIGHT(GameWindowEventType.CLICK_RIGHT, (event, soundPlayer, selectedItem, toBeAppliedOn, storage) -> {
-		StorageWindow storageWindow = (StorageWindow) toBeAppliedOn;
+	CLICK_RIGHT(GameWindowEventType.CLICK_RIGHT, (parameters) -> {
+		StorageWindow storageWindow = (StorageWindow) parameters.getTarget();
 		return storageWindow.onRightClick();
 	}),
 
-	WINDOW_CLOSED(GameWindowEventType.WINDOW_CLOSED, (event, soundPlayer, selectedItem, toBeAppliedOn, storage) -> {
-		StorageWindow storageWindow = (StorageWindow) toBeAppliedOn;
-		if (event.getTarget() == storageWindow) {
+	WINDOW_CLOSED(GameWindowEventType.WINDOW_CLOSED, (parameters) -> {
+		StorageWindow storageWindow = (StorageWindow) parameters.getTarget();
+		if (parameters.getWindowEvent().getTarget() == storageWindow) {
 			if (storageWindow.getPlayerLayout().getWeaponChoice() == null) {
 				StorageGrid storageGrid = storageWindow.getStorageGrid();
 				ItemDisplay itemDisplay = storageGrid.findItemDisplay(WeaponsDefinitions.KNIFE.getId());
-				storageWindow.getPlayerLayout().applySelectionToSelectedWeapon(storageGrid, itemDisplay, storage, subscribers);
+				List<UserInterfaceSystemEventsSubscriber> subscribers = parameters.getSubscribers();
+				storageWindow.getPlayerLayout().applySelectionToSelectedWeapon(storageGrid, itemDisplay, subscribers);
 			}
 		}
 		return false;
@@ -56,15 +57,11 @@ enum StorageWindowOnEvents {
 		this.onEvent = onEvent;
 	}
 
-	public static boolean execute(GameWindowEvent event,
-								  SoundPlayer soundPlayer,
-								  ItemSelectionHandler selectedItem,
-								  StorageWindow storageWindow, 
-								  PlayerStorage storage) {
+	public static boolean execute(WindowEventParameters windowEventParameters) {
 		StorageWindowOnEvents[] values = values();
 		for (StorageWindowOnEvents e : values) {
-			if (e.type == event.getType()) {
-				return e.onEvent.execute(event, soundPlayer, selectedItem, storageWindow, storage);
+			if (e.type == windowEventParameters.getWindowEvent().getType()) {
+				return e.onEvent.execute(windowEventParameters);
 			}
 		}
 		return false;

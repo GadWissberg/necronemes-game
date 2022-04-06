@@ -16,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necronemes.components.player.Item;
+import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.player.PlayerStorage;
 import com.gadarts.necronemes.utils.GeneralUtils;
 
@@ -36,19 +37,19 @@ public class StorageGrid extends ItemsTable {
 	private static final Vector2 auxVector = new Vector2();
 	private static final Coords auxCoords = new Coords();
 	private final Texture gridCellTexture;
-	private final PlayerStorage playerStorage;
+	private final SystemsCommonData systemsCommonData;
 	private boolean invalidLocation;
 
 	public StorageGrid(final Texture gridTexture,
-					   final PlayerStorage playerStorage,
+					   final SystemsCommonData systemsCommonData,
 					   final Texture gridCellTexture,
 					   final ItemSelectionHandler itemSelectionHandler) {
 		super(itemSelectionHandler);
 		setTouchable(Touchable.enabled);
 		setName(NAME);
 		setBackground(new TextureRegionDrawable(gridTexture));
-		this.playerStorage = playerStorage;
 		this.gridCellTexture = gridCellTexture;
+		this.systemsCommonData = systemsCommonData;
 		addListener(event -> {
 			boolean result = false;
 			if (event instanceof GameWindowEvent) {
@@ -62,14 +63,15 @@ public class StorageGrid extends ItemsTable {
 						itemsTable.removeItem(selectedItem);
 						selectedItem.setLocatedIn(StorageGrid.class);
 						Item item = selectedItem.getItem();
-						playerStorage.getItems().add(item);
+						PlayerStorage storage = systemsCommonData.getStorage();
+						storage.getItems().add(item);
 						int cellsInRow = GRID_SIZE / GRID_CELL_SIZE;
 						int numberOfCells = cellsInRow * cellsInRow;
 						int minRow = Integer.MAX_VALUE;
 						int minCol = Integer.MAX_VALUE;
 						for (int i = 0; i < numberOfCells; i++) {
 							if ((checkIfCellIsBehindSelection(i, auxCoords))) {
-								playerStorage.getStorageMap()[auxCoords.row * cellsInRow + auxCoords.col] = item.getDefinition().getId();
+								storage.getStorageMap()[auxCoords.row * cellsInRow + auxCoords.col] = item.getDefinition().getId();
 								minRow = Math.min(auxCoords.row, minRow);
 								minCol = Math.min(auxCoords.col, minCol);
 							}
@@ -157,7 +159,8 @@ public class StorageGrid extends ItemsTable {
 		for (int i = 0; i < numberOfCells; i++) {
 			boolean cellIsBehindSelection = checkIfCellIsBehindSelection(i, auxCoords);
 			Color color = cellIsBehindSelection ? (!invalidLocation ? COLOR_HIGHLIGHT : COLOR_INVALID) : COLOR_REGULAR;
-			int valueInMap = playerStorage.getStorageMap()[auxCoords.row * PlayerStorage.WIDTH + auxCoords.col];
+			PlayerStorage storage = systemsCommonData.getStorage();
+			int valueInMap = storage.getStorageMap()[auxCoords.row * PlayerStorage.WIDTH + auxCoords.col];
 			ItemDisplay selection = itemSelectionHandler.getSelection();
 			if (selection != null && cellIsBehindSelection && valueInMap > 0 && valueInMap != selection.getItem().getDefinition().getId()) {
 				invalidLocation = true;
@@ -206,7 +209,7 @@ public class StorageGrid extends ItemsTable {
 	}
 
 	public void initialize() {
-		playerStorage.getItems().forEach(this::addItemToStorage);
+		systemsCommonData.getStorage().getItems().forEach(this::addItemToStorage);
 	}
 
 	private void addItemToStorage(final Item item) {
@@ -219,7 +222,7 @@ public class StorageGrid extends ItemsTable {
 
 	@Override
 	public void removeItem(final ItemDisplay item) {
-		playerStorage.removeItem(item.getItem().getDefinition().getId());
+		systemsCommonData.getStorage().removeItem(item.getItem().getDefinition().getId());
 	}
 
 	public ItemDisplay findItemDisplay(final int id) {

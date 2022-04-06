@@ -12,7 +12,7 @@ import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.player.Item;
-import com.gadarts.necronemes.systems.player.PlayerStorage;
+import com.gadarts.necronemes.systems.SystemsCommonData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,22 +27,23 @@ public class GameStage extends Stage {
 	}
 
 	private void createStorageWindow(GameAssetsManager assetsManager,
-									 PlayerStorage storage, List<UserInterfaceSystemEventsSubscriber> subscribers) {
+									 SystemsCommonData systemsCommonData,
+									 List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		Texture ninePatchTexture = assetsManager.getTexture(Assets.UiTextures.NINEPATCHES);
 		NinePatch patch = new NinePatch(ninePatchTexture, 12, 12, 12, 12);
 		Window.WindowStyle style = new Window.WindowStyle(new BitmapFont(), Color.BLACK, new NinePatchDrawable(patch));
-		StorageWindow window = new StorageWindow(style, assetsManager, soundPlayer, storage, subscribers);
+		StorageWindow window = new StorageWindow(style, assetsManager, soundPlayer, systemsCommonData, subscribers);
 		defineStorageWindow(window);
 		addActor(window);
 		windows.add(window);
 	}
 
 	void openStorageWindow(GameAssetsManager assetsManager,
-						   PlayerStorage storage,
+						   SystemsCommonData systemsCommonData,
 						   List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		GameWindow windowByName = getWindowByName(StorageWindow.NAME);
 		if (windowByName == null) {
-			createStorageWindow(assetsManager, storage, subscribers);
+			createStorageWindow(assetsManager, systemsCommonData, subscribers);
 		} else {
 			windowByName.setVisible(true);
 		}

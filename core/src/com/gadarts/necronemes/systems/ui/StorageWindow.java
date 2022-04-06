@@ -17,7 +17,7 @@ import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.player.Item;
-import com.gadarts.necronemes.systems.player.PlayerStorage;
+import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.components.player.Weapon;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,38 +39,39 @@ public class StorageWindow extends GameWindow {
 	 */
 	public static final String NAME = "storage";
 	private static final int PLAYER_LAYOUT_PADDING = 40;
-
+	private static final WindowEventParameters auxWindowEventParameters = new WindowEventParameters();
 	@Getter
 	private final ItemSelectionHandler selectedItem = new ItemSelectionHandler();
-
 	private final Texture gridTexture;
 	private final Texture gridCellTexture;
-
 	@Getter(AccessLevel.PACKAGE)
 	private StorageGrid storageGrid;
-
 	@Getter(AccessLevel.PACKAGE)
 	private PlayerLayout playerLayout;
 
 	public StorageWindow(WindowStyle windowStyle,
 						 GameAssetsManager assetsManager,
 						 SoundPlayer soundPlayer,
-						 PlayerStorage storage, List<UserInterfaceSystemEventsSubscriber> subscribers) {
+						 SystemsCommonData systemsCommonData,
+						 List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		super(StorageWindow.NAME, windowStyle, assetsManager);
 		this.gridTexture = createGridTexture();
 		this.gridCellTexture = createGridCellTexture();
-		addPlayerLayout(assetsManager, storage, subscribers);
+		addPlayerLayout(assetsManager, systemsCommonData, subscribers);
 		setTouchable(Touchable.enabled);
-		addStorageGrid(storage);
-		initializeListeners(soundPlayer, storage);
+		addStorageGrid(systemsCommonData);
+		initializeListeners(soundPlayer, systemsCommonData, subscribers);
 	}
 
-	private void initializeListeners(final SoundPlayer player, PlayerStorage storage) {
+	private void initializeListeners(SoundPlayer soundPlayer,
+									 SystemsCommonData commonData,
+									 List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		addListener(event -> {
 			boolean result = false;
 			if (event instanceof GameWindowEvent) {
 				GameWindowEvent windowEvent = (GameWindowEvent) event;
-				result = execute(windowEvent, player, selectedItem, StorageWindow.this, storage);
+				initializeWindowEventParameters(soundPlayer, commonData, subscribers, windowEvent);
+				result = execute(auxWindowEventParameters);
 			}
 			return result;
 		});
@@ -118,6 +119,15 @@ public class StorageWindow extends GameWindow {
 		});
 	}
 
+	private void initializeWindowEventParameters(SoundPlayer soundPlayer, SystemsCommonData commonData, List<UserInterfaceSystemEventsSubscriber> subscribers, GameWindowEvent windowEvent) {
+		auxWindowEventParameters.setWindowEvent(windowEvent);
+		auxWindowEventParameters.setSoundPlayer(soundPlayer);
+		auxWindowEventParameters.setSelectedItem(selectedItem);
+		auxWindowEventParameters.setTarget(StorageWindow.this);
+		auxWindowEventParameters.setSystemsCommonData(commonData);
+		auxWindowEventParameters.setSubscribers(subscribers);
+	}
+
 	boolean onRightClick() {
 		boolean result = false;
 		if (selectedItem.getSelection() != null) {
@@ -128,11 +138,11 @@ public class StorageWindow extends GameWindow {
 	}
 
 	private void addPlayerLayout(GameAssetsManager assetsManager,
-								 PlayerStorage storage,
+								 SystemsCommonData systemsCommonData,
 								 List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		Texture texture = assetsManager.getTexture(Assets.UiTextures.PLAYER_LAYOUT);
-		Weapon selectedWeapon = storage.getSelectedWeapon();
-		playerLayout = new PlayerLayout(texture, selectedWeapon, selectedItem, storage, subscribers);
+		Weapon selectedWeapon = systemsCommonData.getStorage().getSelectedWeapon();
+		playerLayout = new PlayerLayout(texture, selectedWeapon, selectedItem, systemsCommonData, subscribers);
 		add(playerLayout).pad(PLAYER_LAYOUT_PADDING);
 	}
 
@@ -193,8 +203,8 @@ public class StorageWindow extends GameWindow {
 		closeButton.setDisabled(true);
 	}
 
-	private void addStorageGrid(PlayerStorage storage) {
-		storageGrid = new StorageGrid(gridTexture, storage, gridCellTexture, selectedItem);
+	private void addStorageGrid(SystemsCommonData systemsCommonData) {
+		storageGrid = new StorageGrid(gridTexture, systemsCommonData, gridCellTexture, selectedItem);
 		add(storageGrid);
 	}
 

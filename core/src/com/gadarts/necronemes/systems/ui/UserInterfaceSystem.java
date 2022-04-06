@@ -65,7 +65,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 			public void clicked(final InputEvent event, final float x, final float y) {
 				super.clicked(event, x, y);
 				SystemsCommonData commonData = getSystemsCommonData();
-				commonData.getUiStage().openStorageWindow(assetsManager, commonData.getStorage(), subscribers);
+				commonData.getUiStage().openStorageWindow(assetsManager, commonData, subscribers);
 				getSoundPlayer().playSound(Assets.Sounds.UI_CLICK);
 			}
 		});
