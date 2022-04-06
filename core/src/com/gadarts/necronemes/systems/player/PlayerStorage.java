@@ -1,12 +1,13 @@
-package com.gadarts.necronemes.components.player;
+package com.gadarts.necronemes.systems.player;
 
 import com.gadarts.necromine.model.pickups.ItemDefinition;
+import com.gadarts.necronemes.components.player.Item;
+import com.gadarts.necronemes.components.player.Weapon;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -21,15 +22,12 @@ public class PlayerStorage {
 	private final int[] storageMap = new int[SIZE];
 	@Getter(AccessLevel.NONE)
 	private final int[] storageMapSketch = new int[SIZE];
+
+	@Setter(AccessLevel.PACKAGE)
 	private Weapon selectedWeapon;
 
-	public void setSelectedWeapon(final Weapon selectedWeapon) {
-		if (selectedWeapon != this.selectedWeapon) {
-			this.selectedWeapon = selectedWeapon;
-		}
-	}
 
-	public void clear( ) {
+	public void clear() {
 		items.clear();
 		IntStream.range(0, storageMap.length).forEach(i -> storageMap[i] = 0);
 	}
@@ -96,7 +94,6 @@ public class PlayerStorage {
 		return true;
 	}
 
-	@SuppressWarnings("ManualArrayCopy")
 	private void initializeStorageArray(final int[] source, final int[] destination) {
 		for (int i = 0; i < source.length; i++) {
 			destination[i] = source[i];

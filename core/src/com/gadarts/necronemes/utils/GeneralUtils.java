@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Plane;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
 import com.gadarts.necromine.assets.Assets;
@@ -16,6 +17,23 @@ import com.google.gson.JsonObject;
 public class GeneralUtils {
 	public static final float EPSILON = 0.025f;
 	private static final Plane floorPlane = new Plane(new Vector3(0, 1, 0), 0);
+
+	/**
+	 * Whether given contained is fully inside the container.
+	 */
+	public static boolean rectangleContainedInRectangleWithBoundaries(final Rectangle container,
+																	  final Rectangle contained) {
+		float xmin = contained.x;
+		float xmax = xmin + contained.width;
+		float ymin = contained.y;
+		float ymax = ymin + contained.height;
+		float x = container.getX();
+		float y = container.getY();
+		float width = container.getWidth();
+		float height = container.getHeight();
+		return ((xmin >= x && xmin <= x + width) && (xmax >= x && xmax <= x + width))
+				&& ((ymin >= y && ymin <= y + height) && (ymax >= y && ymax <= y + height));
+	}
 
 	public static String getRandomRoadSound(final Assets.Sounds soundDefinition) {
 		int random = MathUtils.random(soundDefinition.getFiles().length - 1);

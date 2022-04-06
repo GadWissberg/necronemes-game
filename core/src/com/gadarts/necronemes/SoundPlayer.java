@@ -31,6 +31,7 @@ public class SoundPlayer {
 		setSfxEnabled(DefaultGameSettings.SFX_ENABLED);
 		setMusicEnabled(DefaultGameSettings.MELODY_ENABLED);
 	}
+	
 
 	public void setMusicEnabled(final boolean musicEnabled) {
 		this.musicEnabled = musicEnabled;

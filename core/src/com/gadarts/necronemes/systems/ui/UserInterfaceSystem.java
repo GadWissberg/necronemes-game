@@ -2,17 +2,23 @@ package com.gadarts.necronemes.systems.ui;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
-import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphNode;
@@ -21,13 +27,21 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
 import com.gadarts.necronemes.utils.EntityBuilder;
 
+import static com.badlogic.gdx.Application.LOG_DEBUG;
 import static com.gadarts.necronemes.DefaultGameSettings.FULL_SCREEN;
-import static com.gadarts.necronemes.Necronemes.*;
+import static com.gadarts.necronemes.Necronemes.FULL_SCREEN_RESOLUTION_HEIGHT;
+import static com.gadarts.necronemes.Necronemes.FULL_SCREEN_RESOLUTION_WIDTH;
+import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_HEIGHT;
+import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_WIDTH;
 
 public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements InputSystemEventsSubscriber {
-	private final static BoundingBox auxBoundingBox = new BoundingBox();
-	private final static Vector3 auxVector3_2 = new Vector3();
+	static final String TABLE_NAME_HUD = "hud";
+	private static final BoundingBox auxBoundingBox = new BoundingBox();
+	private static final Vector3 auxVector3_2 = new Vector3();
+	private static final String BUTTON_NAME_STORAGE = "button_storage";
+	private static final float BUTTON_PADDING = 40;
 	private final SoundPlayer soundPlayer;
+	private final boolean showBorders = DefaultGameSettings.DISPLAY_HUD_OUTLINES;
 	private CursorHandler cursorHandler;
 
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
@@ -36,14 +50,51 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		super(systemsCommonData, soundPlayer, assetsManager);
 		this.soundPlayer = soundPlayer;
 		createUiStage();
+		Table hudTable = addTable();
+		hudTable.setName(TABLE_NAME_HUD);
+		addStorageButton(hudTable);
 	}
 
-	private void createUiStage( ) {
+	private void addStorageButton(final Table table) {
+		Button.ButtonStyle buttonStyle = new Button.ButtonStyle();
+		GameAssetsManager assetsManager = getAssetsManager();
+		Button button = createButtonStyle(buttonStyle, assetsManager);
+		button.setName(BUTTON_NAME_STORAGE);
+		button.addListener(new ClickListener() {
+			@Override
+			public void clicked(final InputEvent event, final float x, final float y) {
+				super.clicked(event, x, y);
+				SystemsCommonData commonData = getSystemsCommonData();
+				commonData.getUiStage().openStorageWindow(assetsManager, commonData.getStorage(), subscribers);
+				getSoundPlayer().playSound(Assets.Sounds.UI_CLICK);
+			}
+		});
+		table.add(button).expand().left().bottom().pad(BUTTON_PADDING);
+	}
+
+	private Button createButtonStyle(Button.ButtonStyle buttonStyle, GameAssetsManager assetsManager) {
+		buttonStyle.up = new TextureRegionDrawable(assetsManager.getTexture(Assets.UiTextures.BUTTON_STORAGE));
+		buttonStyle.down = new TextureRegionDrawable(assetsManager.getTexture(Assets.UiTextures.BUTTON_STORAGE_DOWN));
+		buttonStyle.over = new TextureRegionDrawable(assetsManager.getTexture(Assets.UiTextures.BUTTON_STORAGE_HOVER));
+		Button button = new Button(buttonStyle);
+		return button;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	private Table addTable() {
+		Table table = new Table();
+		Stage stage = getSystemsCommonData().getUiStage();
+		stage.setDebugAll(Gdx.app.getLogLevel() == LOG_DEBUG && showBorders);
+		table.setFillParent(true);
+		stage.addActor(table);
+		return table;
+	}
+
+	private void createUiStage() {
 		int width = FULL_SCREEN ? FULL_SCREEN_RESOLUTION_WIDTH : WINDOWED_RESOLUTION_WIDTH;
 		int height = FULL_SCREEN ? FULL_SCREEN_RESOLUTION_HEIGHT : WINDOWED_RESOLUTION_HEIGHT;
 		FitViewport fitViewport = new FitViewport(width, height);
-		Entity player = getSystemsCommonData().getPlayer();
-		GameStage stage = new GameStage(fitViewport, ComponentsMapper.player.get(player), soundPlayer);
+		GameStage stage = new GameStage(fitViewport, soundPlayer);
 		getSystemsCommonData().setUiStage(stage);
 		stage.setDebugAll(DefaultGameSettings.DISPLAY_HUD_OUTLINES);
 	}

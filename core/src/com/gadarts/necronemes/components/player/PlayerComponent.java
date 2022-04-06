@@ -8,7 +8,6 @@ import lombok.Setter;
 @Getter
 public class PlayerComponent implements GameComponent {
 	public static final float PLAYER_HEIGHT = 1;
-	private final PlayerStorage storage = new PlayerStorage();
 	private CharacterAnimations generalAnimations;
 
 	@Setter
@@ -16,11 +15,10 @@ public class PlayerComponent implements GameComponent {
 
 	@Override
 	public void reset( ) {
-		storage.clear();
+		
 	}
 
-	public void init(final Weapon selectedWeapon, final CharacterAnimations general) {
+	public void init(final CharacterAnimations general) {
 		this.generalAnimations = general;
-		storage.setSelectedWeapon(selectedWeapon);
 	}
 }

@@ -4,7 +4,6 @@ import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -27,11 +26,13 @@ import com.gadarts.necromine.model.characters.attributes.Agility;
 import com.gadarts.necromine.model.characters.attributes.Strength;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterData;
-import com.gadarts.necronemes.components.character.*;
+import com.gadarts.necronemes.components.character.CharacterSkillsParameters;
+import com.gadarts.necronemes.components.character.CharacterSoundData;
+import com.gadarts.necronemes.components.character.CharacterSpriteData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelBoundingBox;
-import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.utils.EntityBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -46,7 +47,15 @@ import java.util.stream.IntStream;
 import static com.gadarts.necromine.assets.Assets.Atlases.PLAYER_GENERIC;
 import static com.gadarts.necromine.assets.Assets.Atlases.findByRelatedWeapon;
 import static com.gadarts.necromine.assets.Assets.SurfaceTextures.MISSING;
-import static com.gadarts.necromine.assets.MapJsonKeys.*;
+import static com.gadarts.necromine.assets.MapJsonKeys.CHARACTERS;
+import static com.gadarts.necromine.assets.MapJsonKeys.COL;
+import static com.gadarts.necromine.assets.MapJsonKeys.DEPTH;
+import static com.gadarts.necromine.assets.MapJsonKeys.DIRECTION;
+import static com.gadarts.necromine.assets.MapJsonKeys.MATRIX;
+import static com.gadarts.necromine.assets.MapJsonKeys.ROW;
+import static com.gadarts.necromine.assets.MapJsonKeys.TILES;
+import static com.gadarts.necromine.assets.MapJsonKeys.TYPE;
+import static com.gadarts.necromine.assets.MapJsonKeys.WIDTH;
 import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_Y;
 import static com.gadarts.necromine.model.characters.CharacterTypes.PLAYER;
 import static com.gadarts.necromine.model.characters.SpriteType.IDLE;
@@ -141,12 +150,7 @@ public class MapBuilder implements Disposable {
 		builder.addModelInstanceComponent(modelInstance, true);
 	}
 
-	private Weapon initializeStartingWeapon( ) {
-		Weapon weapon = Pools.obtain(Weapon.class);
-		Texture image = assetsManager.getTexture(DefaultGameSettings.STARTING_WEAPON.getImage());
-		weapon.init(DefaultGameSettings.STARTING_WEAPON, 0, 0, image);
-		return weapon;
-	}
+	
 
 	private Vector3 inflateCharacterPosition(final JsonElement characterJsonElement, final MapGraph mapGraph) {
 		JsonObject asJsonObject = characterJsonElement.getAsJsonObject();
@@ -157,9 +161,8 @@ public class MapBuilder implements Disposable {
 	}
 
 	private void inflatePlayer(final JsonObject characterJsonObject, final MapGraph mapGraph) {
-		Weapon weapon = initializeStartingWeapon();
 		CharacterAnimations general = assetsManager.get(PLAYER_GENERIC.name());
-		EntityBuilder builder = EntityBuilder.beginBuildingEntity(engine).addPlayerComponent(weapon, general);
+		EntityBuilder builder = EntityBuilder.beginBuildingEntity(engine).addPlayerComponent(general);
 		Vector3 position = inflateCharacterPosition(characterJsonObject, mapGraph);
 		auxCharacterSoundData.set(Assets.Sounds.PLAYER_PAIN, Assets.Sounds.PLAYER_DEATH, Assets.Sounds.STEP);
 		CharacterSkillsParameters skills = new CharacterSkillsParameters(

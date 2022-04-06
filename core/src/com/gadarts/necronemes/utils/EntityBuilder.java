@@ -189,10 +189,10 @@ public class EntityBuilder {
 		return instance;
 	}
 
-	public EntityBuilder addPlayerComponent(final Weapon selectedWeapon, final CharacterAnimations general) {
+	public EntityBuilder addPlayerComponent(final CharacterAnimations general) {
 		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
 		PlayerComponent playerComponent = engine.createComponent(PlayerComponent.class);
-		playerComponent.init(selectedWeapon, general);
+		playerComponent.init(general);
 		currentEntity.add(playerComponent);
 		return instance;
 	}
