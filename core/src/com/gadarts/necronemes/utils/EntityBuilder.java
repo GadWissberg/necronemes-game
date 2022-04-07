@@ -10,10 +10,12 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
+import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.components.FloorComponent;
 import com.gadarts.necronemes.components.PickUpComponent;
+import com.gadarts.necronemes.components.WallComponent;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
@@ -81,6 +83,14 @@ public class EntityBuilder {
 		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
 		Weapon weapon = (Weapon) addPickUpComponent(Weapon.class, definition, displayImage);
 		weapon.setBulletTextureRegion(bulletRegion);
+		return instance;
+	}
+
+	public EntityBuilder addWallComponent(final MapNodeData parentNode) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		WallComponent component = engine.createComponent(WallComponent.class);
+		component.init(parentNode);
+		currentEntity.add(component);
 		return instance;
 	}
 

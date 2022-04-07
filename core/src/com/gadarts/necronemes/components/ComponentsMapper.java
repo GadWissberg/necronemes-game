@@ -7,7 +7,6 @@ import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
-import com.gadarts.necronemes.systems.PickupSystem;
 
 /**
  * Easy to access component mappers.

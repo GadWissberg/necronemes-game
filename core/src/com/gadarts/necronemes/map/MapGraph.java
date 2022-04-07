@@ -14,7 +14,9 @@ import com.badlogic.gdx.utils.Array;
 import com.gadarts.necromine.model.Coords;
 import com.gadarts.necromine.model.map.MapNodesTypes;
 import com.gadarts.necronemes.components.ComponentsMapper;
+import com.gadarts.necronemes.components.FloorComponent;
 import com.gadarts.necronemes.components.PickUpComponent;
+import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.utils.GeneralUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -29,6 +31,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private final Dimension mapSize;
 	@Getter
 	private final Array<MapGraphNode> nodes;
+	private final ImmutableArray<Entity> pickupEntities;
 	@Setter(AccessLevel.PACKAGE)
 	@Getter(AccessLevel.PACKAGE)
 	MapGraphNode currentDestination;
@@ -36,7 +39,6 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private MapGraphConnectionCosts maxConnectionCostInSearch;
 	@Setter
 	private boolean includeEnemiesInGetConnections = true;
-	private final ImmutableArray<Entity> pickupEntities;
 
 	public MapGraph(Dimension mapSize, PooledEngine engine) {
 		this.mapSize = mapSize;
@@ -47,6 +49,12 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 			}
 		}
 		this.pickupEntities = engine.getEntitiesFor(Family.all(PickUpComponent.class).get());
+		ImmutableArray<Entity> floorEntities = engine.getEntitiesFor(Family.all(FloorComponent.class).get());
+		floorEntities.forEach(entity -> {
+			GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(entity).getModelInstance();
+			Vector3 pos = modelInstance.transform.getTranslation(auxVector3);
+			getNode(pos).setEntity(entity);
+		});
 	}
 
 	public Entity getPickupFromNode(final MapGraphNode node) {
