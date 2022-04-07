@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -25,6 +26,7 @@ import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.turns.TurnsSystemEventsSubscriber;
 import com.gadarts.necronemes.utils.EntityBuilder;
 
 import static com.badlogic.gdx.Application.LOG_DEBUG;
@@ -34,7 +36,7 @@ import static com.gadarts.necronemes.Necronemes.FULL_SCREEN_RESOLUTION_WIDTH;
 import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_HEIGHT;
 import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_WIDTH;
 
-public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements InputSystemEventsSubscriber {
+public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements InputSystemEventsSubscriber, TurnsSystemEventsSubscriber {
 	static final String TABLE_NAME_HUD = "hud";
 	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private static final Vector3 auxVector3_2 = new Vector3();
@@ -53,6 +55,12 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		Table hudTable = addTable();
 		hudTable.setName(TABLE_NAME_HUD);
 		addStorageButton(hudTable);
+	}
+
+	@Override
+	public void onPlayerTurn(long currentTurnId) {
+		Button button = getSystemsCommonData().getUiStage().getRoot().findActor(BUTTON_NAME_STORAGE);
+		button.setTouchable(Touchable.enabled);
 	}
 
 	private void addStorageButton(final Table table) {

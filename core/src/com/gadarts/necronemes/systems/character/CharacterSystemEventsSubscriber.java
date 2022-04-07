@@ -5,6 +5,10 @@ import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.SystemEventsSubscriber;
 
 public interface CharacterSystemEventsSubscriber extends SystemEventsSubscriber {
+	default void onCharacterCommandDone(final Entity character, final CharacterCommand lastCommand) {
+
+	}
+
 	default void onCharacterRotated(Entity character) {
 
 	}

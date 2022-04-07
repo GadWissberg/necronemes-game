@@ -14,5 +14,6 @@ public final class DefaultGameSettings {
 	public static final boolean DISABLE_FRUSTUM_CULLING = false;
 	public static final int LOG_LEVEL = LOG_DEBUG;
 	public static final WeaponsDefinitions STARTING_WEAPON = WeaponsDefinitions.KNIFE;
+	public static final boolean PARALYZED_ENEMIES = false;
 
 }

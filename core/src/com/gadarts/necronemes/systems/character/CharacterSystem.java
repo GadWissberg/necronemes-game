@@ -141,7 +141,11 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
 		characterComponent.setMotivation(null);
 		characterComponent.getCharacterSpriteData().setSpriteType(SpriteType.IDLE);
+		CharacterCommand lastCommand = getSystemsCommonData().getCurrentCommand();
 		getSystemsCommonData().setCurrentCommand(null);
+		for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onCharacterCommandDone(character, lastCommand);
+		}
 	}
 
 	private void handleModeWithNonLoopingAnimation(final Entity character) {

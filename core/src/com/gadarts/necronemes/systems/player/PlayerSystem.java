@@ -56,6 +56,15 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
+	public void onCharacterCommandDone(final Entity character, final CharacterCommand executedCommand) {
+		if (ComponentsMapper.player.has(character)) {
+			for (PlayerSystemEventsSubscriber subscriber : subscribers) {
+				subscriber.onPlayerFinishedTurn();
+			}
+		}
+	}
+
+	@Override
 	public void onItemPickedUp(final Entity itemPickedUp) {
 		Item item = ComponentsMapper.pickup.get(itemPickedUp).getItem();
 		if (getSystemsCommonData().getStorage().addItem(item)) {
