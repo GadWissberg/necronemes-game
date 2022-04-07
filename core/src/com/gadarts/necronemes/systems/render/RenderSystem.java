@@ -8,11 +8,18 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.graphics.g3d.decals.DecalBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
+import com.badlogic.gdx.utils.TimeUtils;
+import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.characters.CharacterUtils;
 import com.gadarts.necromine.model.characters.Direction;
@@ -25,6 +32,7 @@ import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.CharacterAnimation;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterSpriteData;
+import com.gadarts.necronemes.components.enemy.EnemyComponent;
 import com.gadarts.necronemes.components.mi.AdditionalRenderData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
@@ -32,26 +40,38 @@ import com.gadarts.necronemes.components.sd.RelatedDecal;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.enemy.EnemyAiStatus;
 
 import java.util.List;
 
 import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 
 public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
-	private final static Vector3 auxVector3_1 = new Vector3();
-	private final static Vector3 auxVector3_2 = new Vector3();
-	private final static Vector3 auxVector3_3 = new Vector3();
-	private final static BoundingBox auxBoundingBox = new BoundingBox();
+	private static final Vector3 auxVector3_1 = new Vector3();
+	private static final Vector3 auxVector3_2 = new Vector3();
+	private static final Vector3 auxVector3_3 = new Vector3();
+	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private static final int DECALS_POOL_SIZE = 200;
+	private static final int ICON_FLOWER_APPEARANCE_DURATION = 1000;
 	private final ModelBatch modelBatch;
+	private final SpriteBatch spriteBatch;
+	private final Texture iconFlowerLookingFor;
+	private final StringBuilder stringBuilder = new StringBuilder();
+	private final GlyphLayout skillFlowerGlyph;
+	private final BitmapFont skillFlowerFont;
 	private DecalBatch decalBatch;
 	private ImmutableArray<Entity> modelInstanceEntities;
 	private ImmutableArray<Entity> characterDecalsEntities;
 	private ImmutableArray<Entity> simpleDecalsEntities;
+	private ImmutableArray<Entity> enemyEntities;
 
 	public RenderSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
 		super(systemsCommonData, soundPlayer, assetsManager);
 		this.modelBatch = new ModelBatch();
+		this.spriteBatch = new SpriteBatch();
+		iconFlowerLookingFor = assetsManager.getTexture(Assets.UiTextures.ICON_LOOKING_FOR);
+		skillFlowerFont = new BitmapFont();
+		skillFlowerGlyph = new GlyphLayout();
 	}
 
 	@Override
@@ -59,13 +79,13 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		super.addedToEngine(engine);
 		characterDecalsEntities = engine.getEntitiesFor(Family.all(CharacterDecalComponent.class).get());
 		simpleDecalsEntities = engine.getEntitiesFor(Family.all(SimpleDecalComponent.class).get());
+		enemyEntities = engine.getEntitiesFor(Family.all(EnemyComponent.class).get());
 	}
 
 	@Override
 	public Class<RenderSystemEventsSubscriber> getEventsSubscriberClass( ) {
 		return RenderSystemEventsSubscriber.class;
 	}
-
 
 	@Override
 	public void initializeData( ) {
@@ -139,6 +159,59 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		renderModels(modelBatch, true);
 		renderDecals(deltaTime);
 		getSystemsCommonData().getUiStage().draw();
+		renderSkillFlowersText();
+	}
+
+	private void renderSkillFlowersText() {
+		if (enemyEntities.size() > 0) {
+			spriteBatch.begin();
+			for (Entity enemy : enemyEntities) {
+				if (ComponentsMapper.simpleDecal.has(enemy)) {
+					renderSkillFlowerInsideContent(enemy);
+				}
+			}
+			spriteBatch.end();
+		}
+	}
+
+	private void flipIconDisplayInFlower(final EnemyComponent enemyComponent) {
+		if (enemyComponent.getAiStatus() == EnemyAiStatus.SEARCHING) {
+			long lastIconDisplayInFlower = enemyComponent.getIconDisplayInFlowerTimeStamp();
+			if (TimeUtils.timeSinceMillis(lastIconDisplayInFlower) >= ICON_FLOWER_APPEARANCE_DURATION) {
+				enemyComponent.setDisplayIconInFlower(!enemyComponent.isDisplayIconInFlower());
+				enemyComponent.setIconDisplayInFlowerTimeStamp(TimeUtils.millis());
+			}
+		}
+	}
+
+	private void renderSkillFlowerInsideContent(final Entity enemy) {
+		EnemyComponent enemyComponent = ComponentsMapper.enemy.get(enemy);
+		flipIconDisplayInFlower(enemyComponent);
+		SimpleDecalComponent simpleDecalComponent = ComponentsMapper.simpleDecal.get(enemy);
+		Camera camera = getSystemsCommonData().getCamera();
+		Vector3 screenPos = camera.project(auxVector3_1.set(simpleDecalComponent.getDecal().getPosition()));
+		if (enemyComponent.getAiStatus() == EnemyAiStatus.SEARCHING && enemyComponent.isDisplayIconInFlower()) {
+			renderSkillFlowerIcon(spriteBatch, screenPos);
+		} else {
+			renderSkillFlowerText(spriteBatch, enemyComponent, screenPos);
+		}
+	}
+
+	private void renderSkillFlowerIcon(final SpriteBatch spriteBatch, final Vector3 screenPos) {
+		float x = screenPos.x - iconFlowerLookingFor.getWidth() / 2F;
+		float y = screenPos.y - iconFlowerLookingFor.getHeight() / 2F;
+		spriteBatch.draw(iconFlowerLookingFor, x, y);
+	}
+
+	private void renderSkillFlowerText(final SpriteBatch spriteBatch,
+									   final EnemyComponent enemyComponent,
+									   final Vector3 screenPos) {
+		stringBuilder.setLength(0);
+		String text = stringBuilder.append(enemyComponent.getSkill()).toString();
+		skillFlowerGlyph.setText(skillFlowerFont, text);
+		float x = screenPos.x - skillFlowerGlyph.width / 2F;
+		float y = screenPos.y + skillFlowerGlyph.height / 2F;
+		skillFlowerFont.draw(spriteBatch, text, x, y);
 	}
 
 	private void renderDecals(final float deltaTime) {
@@ -148,7 +221,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		Gdx.gl.glDepthMask(true);
 	}
 
-	private void renderSimpleDecals( ) {
+	private void renderSimpleDecals() {
 		for (Entity entity : simpleDecalsEntities) {
 			renderSimpleDecal(decalBatch, entity);
 		}
@@ -172,12 +245,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private void renderSimpleDecal(final DecalBatch decalBatch, final Entity entity) {
 		SimpleDecalComponent simpleDecalComponent = ComponentsMapper.simpleDecal.get(entity);
 		if (simpleDecalComponent != null && simpleDecalComponent.isVisible()) {
-			if (!simpleDecalComponent.isAffectedByFow()) {
 				handleSimpleDecalAnimation(entity, simpleDecalComponent);
 				faceDecalToCamera(simpleDecalComponent, simpleDecalComponent.getDecal());
 				decalBatch.add(simpleDecalComponent.getDecal());
 				renderRelatedDecals(decalBatch, simpleDecalComponent);
-			}
 		}
 	}
 
@@ -310,7 +381,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 
 	@Override
 	public void dispose( ) {
-
+		skillFlowerFont.dispose();
 	}
 
 }

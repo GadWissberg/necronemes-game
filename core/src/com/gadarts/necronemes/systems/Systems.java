@@ -2,6 +2,7 @@ package com.gadarts.necronemes.systems;
 
 import com.gadarts.necronemes.systems.camera.CameraSystem;
 import com.gadarts.necronemes.systems.character.CharacterSystem;
+import com.gadarts.necronemes.systems.enemy.EnemySystem;
 import com.gadarts.necronemes.systems.input.InputSystem;
 import com.gadarts.necronemes.systems.player.PlayerSystem;
 import com.gadarts.necronemes.systems.render.RenderSystem;
@@ -19,6 +20,7 @@ public enum Systems {
 	PROFILING(ProfilingSystem.class),
 	PICKUP(PickupSystem.class),
 	TURNS(TurnsSystem.class),
+	ENEMY(EnemySystem.class),
 	CHARACTER(CharacterSystem.class);
 
 	private final Class<? extends GameSystem<? extends SystemEventsSubscriber>> systemClass;

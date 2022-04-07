@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.CharacterComponent;
+import com.gadarts.necronemes.components.enemy.EnemyComponent;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
@@ -20,5 +21,7 @@ public class ComponentsMapper {
 	public static final ComponentMapper<CharacterDecalComponent> characterDecal = ComponentMapper.getFor(CharacterDecalComponent.class);
 	public static final ComponentMapper<SimpleDecalComponent> simpleDecal = ComponentMapper.getFor(SimpleDecalComponent.class);
 	public static final ComponentMapper<PickUpComponent> pickup = ComponentMapper.getFor(PickUpComponent.class);
+	public static final ComponentMapper<EnemyComponent> enemy = ComponentMapper.getFor(EnemyComponent.class);
+	public static final ComponentMapper<FlowerSkillIconComponent> flowerSkillIcon = ComponentMapper.getFor(FlowerSkillIconComponent.class);
 }
 

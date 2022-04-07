@@ -19,8 +19,6 @@ public class SimpleDecalComponent implements GameComponent {
 	private boolean billboard;
 	private boolean animatedByAnimationComponent;
 	@Setter
-	private boolean affectedByFow;
-	@Setter
 	private boolean visible;
 
 	@Override

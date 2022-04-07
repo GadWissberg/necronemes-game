@@ -3,6 +3,7 @@ package com.gadarts.necronemes.utils;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
@@ -10,6 +11,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
+import com.gadarts.necromine.model.characters.enemies.Enemies;
 import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
@@ -20,6 +22,7 @@ import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
 import com.gadarts.necronemes.components.collision.CollisionComponent;
+import com.gadarts.necronemes.components.enemy.EnemyComponent;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.Item;
@@ -186,6 +189,16 @@ public class EntityBuilder {
 		CharacterDecalComponent characterDecalComponent = engine.createComponent(CharacterDecalComponent.class);
 		characterDecalComponent.init(animations, spriteType, direction, position);
 		currentEntity.add(characterDecalComponent);
+		return instance;
+	}
+
+	public EntityBuilder addEnemyComponent(final Enemies enemyDefinition,
+										   final int skill,
+										   final Animation<TextureAtlas.AtlasRegion> bulletRegions) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		EnemyComponent component = engine.createComponent(EnemyComponent.class);
+		component.init(enemyDefinition, skill, bulletRegions);
+		currentEntity.add(component);
 		return instance;
 	}
 
