@@ -5,5 +5,5 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.gadarts.necronemes.systems.SystemEventsSubscriber;
 
 public interface RenderSystemEventsSubscriber extends SystemEventsSubscriber {
-	void onFrameChanged(Entity entity, float deltaTime, TextureAtlas.AtlasRegion newFrame);
+	default void onFrameChanged(Entity entity, float deltaTime, TextureAtlas.AtlasRegion newFrame){}
 }

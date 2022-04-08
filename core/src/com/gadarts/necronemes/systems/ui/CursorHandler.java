@@ -1,12 +1,15 @@
 package com.gadarts.necronemes.systems.ui;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Disposable;
+import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import lombok.Getter;
@@ -24,14 +27,23 @@ public class CursorHandler implements Disposable {
 	private static final float CURSOR_FLICKER_STEP = 1.5f;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private final SystemsCommonData systemsCommonData;
+	private final BitmapFont cursorCellPositionLabelFont;
+	private final Label cursorCellPositionLabel;
 	private ModelInstance cursorModelInstance;
 	private float cursorFlickerChange = CURSOR_FLICKER_STEP;
 
 	public CursorHandler(SystemsCommonData systemsCommonData) {
 		this.systemsCommonData = systemsCommonData;
+		if (DefaultGameSettings.DISPLAY_CURSOR_POSITION) {
+			cursorCellPositionLabelFont = new BitmapFont();
+			Label.LabelStyle style = new Label.LabelStyle(cursorCellPositionLabelFont, POSITION_LABEL_COLOR);
+			cursorCellPositionLabel = new Label(null, style);
+			systemsCommonData.getUiStage().addActor(cursorCellPositionLabel);
+			cursorCellPositionLabel.setPosition(0, POSITION_LABEL_Y);
+		}
 	}
 
-	MapGraphNode getCursorNode() {
+	MapGraphNode getCursorNode( ) {
 		Vector3 dest = getCursorModelInstance().transform.getTranslation(auxVector3_1);
 		return systemsCommonData.getMap().getNode((int) dest.x, (int) dest.z);
 	}
@@ -74,6 +86,7 @@ public class CursorHandler implements Disposable {
 
 	@Override
 	public void dispose( ) {
+		cursorCellPositionLabelFont.dispose();
 	}
 
 	public void onMouseEnteredNewNode(final MapGraphNode newNode) {

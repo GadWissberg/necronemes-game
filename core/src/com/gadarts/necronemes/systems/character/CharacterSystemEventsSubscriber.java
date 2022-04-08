@@ -20,4 +20,8 @@ public interface CharacterSystemEventsSubscriber extends SystemEventsSubscriber 
 	default void onItemPickedUp(final Entity itemPickedUp) {
 
 	}
+
+	default void onDestinationReached(Entity character) {
+
+	}
 }

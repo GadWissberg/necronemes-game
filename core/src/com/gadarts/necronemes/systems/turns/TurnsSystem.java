@@ -5,30 +5,39 @@ import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.enemy.EnemySystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 
-public class TurnsSystem extends GameSystem<TurnsSystemEventsSubscriber> implements PlayerSystemEventsSubscriber {
+public class TurnsSystem extends GameSystem<TurnsSystemEventsSubscriber> implements
+		PlayerSystemEventsSubscriber,
+		EnemySystemEventsSubscriber {
 	private boolean playerTurnDone;
 	private Turns currentTurn;
 	private boolean enemyTurnDone;
-	private long currentTurnId;
 
 	public TurnsSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
 		super(systemsCommonData, soundPlayer, assetsManager);
+		currentTurn = Turns.PLAYER;
 	}
 
-	private void resetTurnFlags() {
+	@Override
+	public void onEnemyFinishedTurn( ) {
+		enemyTurnDone = true;
+	}
+
+	private void resetTurnFlags( ) {
 		playerTurnDone = false;
 		enemyTurnDone = false;
 	}
 
-	private void invokePlayerTurnDone() {
+	private void invokePlayerTurnDone( ) {
 		resetTurnFlags();
-		currentTurnId++;
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		systemsCommonData.setCurrentTurnId(systemsCommonData.getCurrentTurnId() + 1);
 		if (!DefaultGameSettings.PARALYZED_ENEMIES) {
 			currentTurn = Turns.ENEMY;
 			for (TurnsSystemEventsSubscriber subscriber : subscribers) {
-				subscriber.onEnemyTurn(currentTurnId);
+				subscriber.onEnemyTurn(systemsCommonData.getCurrentTurnId());
 			}
 		}
 	}
@@ -43,32 +52,33 @@ public class TurnsSystem extends GameSystem<TurnsSystemEventsSubscriber> impleme
 		}
 	}
 
-	private void invokeEnemyTurnDone() {
+	private void invokeEnemyTurnDone( ) {
 		resetTurnFlags();
-		currentTurnId++;
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		systemsCommonData.setCurrentTurnId(systemsCommonData.getCurrentTurnId() + 1);
 		currentTurn = Turns.PLAYER;
 		for (TurnsSystemEventsSubscriber subscriber : subscribers) {
-			subscriber.onPlayerTurn(currentTurnId);
+			subscriber.onPlayerTurn(getSystemsCommonData().getCurrentTurnId());
 		}
 	}
 
 	@Override
-	public Class<TurnsSystemEventsSubscriber> getEventsSubscriberClass() {
+	public Class<TurnsSystemEventsSubscriber> getEventsSubscriberClass( ) {
 		return TurnsSystemEventsSubscriber.class;
 	}
 
 	@Override
-	public void onPlayerFinishedTurn() {
+	public void onPlayerFinishedTurn( ) {
 		playerTurnDone = true;
 	}
 
 	@Override
-	public void initializeData() {
+	public void initializeData( ) {
 
 	}
 
 	@Override
-	public void dispose() {
+	public void dispose( ) {
 
 	}
 

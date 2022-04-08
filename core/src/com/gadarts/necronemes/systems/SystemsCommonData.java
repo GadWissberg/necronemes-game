@@ -29,6 +29,7 @@ public class SystemsCommonData {
 	private CharacterCommand currentCommand;
 	private Entity currentHighLightedPickup;
 	private Entity itemToPickup;
+	private long currentTurnId;
 
 	public SystemsCommonData(String versionName, int versionNumber) {
 		this.versionName = versionName;

@@ -16,6 +16,8 @@ import com.gadarts.necromine.model.map.MapNodesTypes;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.FloorComponent;
 import com.gadarts.necronemes.components.PickUpComponent;
+import com.gadarts.necronemes.components.character.CharacterComponent;
+import com.gadarts.necronemes.components.enemy.EnemyComponent;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.utils.GeneralUtils;
 import lombok.AccessLevel;
@@ -23,15 +25,19 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.awt.*;
+import java.util.List;
 
 public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private static final Vector3 auxVector3 = new Vector3();
 	private static final Array<Connection<MapGraphNode>> auxConnectionsList = new Array<>();
 	private static final float PASSABLE_MAX_HEIGHT_DIFF = 0.3f;
+	private final static Vector2 auxVector2 = new Vector2();
 	private final Dimension mapSize;
 	@Getter
 	private final Array<MapGraphNode> nodes;
 	private final ImmutableArray<Entity> pickupEntities;
+	private final ImmutableArray<Entity> enemiesEntities;
+	private final ImmutableArray<Entity> characterEntities;
 	@Setter(AccessLevel.PACKAGE)
 	@Getter(AccessLevel.PACKAGE)
 	MapGraphNode currentDestination;
@@ -41,6 +47,8 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private boolean includeEnemiesInGetConnections = true;
 
 	public MapGraph(Dimension mapSize, PooledEngine engine) {
+		this.characterEntities = engine.getEntitiesFor(Family.all(CharacterComponent.class).get());
+		this.enemiesEntities = engine.getEntitiesFor(Family.all(EnemyComponent.class).get());
 		this.mapSize = mapSize;
 		this.nodes = new Array<>(mapSize.width * mapSize.height);
 		for (int row = 0; row < mapSize.height; row++) {
@@ -55,6 +63,59 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 			Vector3 pos = modelInstance.transform.getTranslation(auxVector3);
 			getNode(pos).setEntity(entity);
 		});
+	}
+
+	public Entity getAliveEnemyFromNode(final MapGraphNode node) {
+		Entity result = null;
+		for (Entity enemy : enemiesEntities) {
+			MapGraphNode enemyNode = getNode(ComponentsMapper.characterDecal.get(enemy).getDecal().getPosition());
+			if (ComponentsMapper.character.get(enemy).getSkills().getHealthData().getHp() > 0 && enemyNode.equals(node)) {
+				result = enemy;
+				break;
+			}
+		}
+		return result;
+	}
+
+	private void getThreeBehind(final MapGraphNode node, final List<MapGraphNode> output) {
+		int x = node.getCol();
+		int y = node.getRow();
+		if (y > 0) {
+			if (x > 0) {
+				output.add(getNode(x - 1, y - 1));
+			}
+			output.add(getNode(x, y - 1));
+			if (x < mapSize.width - 1) {
+				output.add(getNode(x + 1, y - 1));
+			}
+		}
+	}
+
+	private void getThreeInFront(final MapGraphNode node, final List<MapGraphNode> output) {
+		int x = node.getCol();
+		int y = node.getRow();
+		if (y < mapSize.height - 1) {
+			if (x > 0) {
+				output.add(getNode(x - 1, y + 1));
+			}
+			output.add(getNode(x, y + 1));
+			if (x < mapSize.width - 1) {
+				output.add(getNode(x + 1, y + 1));
+			}
+		}
+	}
+
+	public java.util.List<MapGraphNode> getNodesAround(final MapGraphNode node, final List<MapGraphNode> output) {
+		output.clear();
+		getThreeBehind(node, output);
+		getThreeInFront(node, output);
+		if (node.getCol() > 0) {
+			output.add(getNode(node.getCol() - 1, node.getRow()));
+		}
+		if (node.getCol() < mapSize.width - 1) {
+			output.add(getNode(node.getCol() + 1, node.getRow()));
+		}
+		return output;
 	}
 
 	public Entity getPickupFromNode(final MapGraphNode node) {
@@ -121,9 +182,26 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		return auxConnectionsList;
 	}
 
+	public boolean checkIfNodeIsAvailable(final MapGraphNode destinationNode) {
+		for (Entity c : characterEntities) {
+			MapGraphNode node = getNode(ComponentsMapper.characterDecal.get(c).getNodePosition(auxVector2));
+			if (currentDestination == node || ComponentsMapper.character.get(c).getSkills().getHealthData().getHp() <= 0) {
+				continue;
+			}
+			if (node.equals(destinationNode)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private void checkIfConnectionIsAvailable(final Connection<MapGraphNode> connection) {
+		boolean available = true;
+		if (includeEnemiesInGetConnections) {
+			available = checkIfNodeIsAvailable(connection.getToNode());
+		}
 		boolean validCost = connection.getCost() <= maxConnectionCostInSearch.getCostValue();
-		if (validCost && checkIfConnectionPassable(connection)) {
+		if (available && validCost && checkIfConnectionPassable(connection)) {
 			auxConnectionsList.add(connection);
 		}
 	}

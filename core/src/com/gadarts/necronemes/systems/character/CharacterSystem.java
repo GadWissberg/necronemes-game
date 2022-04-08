@@ -24,18 +24,19 @@ import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.map.MapGraphPath;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.enemy.EnemySystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
 
 import static com.gadarts.necromine.model.characters.SpriteType.*;
-import static com.gadarts.necronemes.components.character.CharacterMotivation.END_MY_TURN;
-import static com.gadarts.necronemes.components.character.CharacterMotivation.TO_PICK_UP;
+import static com.gadarts.necronemes.components.character.CharacterMotivation.*;
 import static com.gadarts.necronemes.map.MapGraphConnectionCosts.CLEAN;
 import static com.gadarts.necronemes.utils.GeneralUtils.EPSILON;
 
 public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber> implements
 		PlayerSystemEventsSubscriber,
-		RenderSystemEventsSubscriber {
+		RenderSystemEventsSubscriber,
+		EnemySystemEventsSubscriber {
 	private static final int ROT_INTERVAL = 125;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector2 auxVector2_1 = new Vector2();
@@ -100,6 +101,9 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private void executeActionsAfterDestinationReached(final Entity character) {
+		for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onDestinationReached(character);
+		}
 		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
 		currentCommand.getType()
 				.getToDoAfterDestinationReached()
@@ -179,7 +183,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	private void handleCurrentCommand(final CharacterCommand currentCommand) {
 		CharacterComponent characterComponent = ComponentsMapper.character.get(currentCommand.getCharacter());
 		SpriteType spriteType = characterComponent.getCharacterSpriteData().getSpriteType();
-		if (spriteType == PICKUP) {
+		if (spriteType == ATTACK || spriteType == PICKUP || spriteType == ATTACK_PRIMARY) {
 			handleModeWithNonLoopingAnimation(currentCommand.getCharacter());
 		} else if (characterComponent.getMotivationData().getMotivation() == END_MY_TURN) {
 			commandDone(currentCommand.getCharacter());
@@ -222,23 +226,51 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		}
 	}
 
-	private Direction initializeRotation(Entity character, CharacterComponent charComponent, CharacterRotationData rotationData) {
+	private Direction calculateDirectionToTarget(final Entity character) {
+		Vector3 pos = auxVector3_1.set(ComponentsMapper.characterDecal.get(character).getDecal().getPosition());
+		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
+		Entity target = characterComponent.getTarget();
+		MapGraph map = getSystemsCommonData().getMap();
+		MapGraphNode targetNode = map.getNode(ComponentsMapper.characterDecal.get(target).getDecal().getPosition());
+		Vector2 destPos = targetNode.getCenterPosition(auxVector2_2);
+		Vector2 directionToDest = destPos.sub(pos.x, pos.z).nor();
+		return Direction.findDirection(directionToDest);
+	}
+
+	private Direction initializeRotation(Entity character,
+										 CharacterComponent charComponent,
+										 CharacterRotationData rotationData) {
 		rotationData.setLastRotation(TimeUtils.millis());
-		Direction directionToDest;
-		if (charComponent.getMotivationData().getMotivation() == TO_PICK_UP) {
-			directionToDest = charComponent.getCharacterSpriteData().getFacingDirection();
+		if (charComponent.getMotivationData().getMotivation() == CharacterMotivation.TO_ATTACK) {
+			return calculateDirectionToTarget(character);
+		} else if (charComponent.getMotivationData().getMotivation() == TO_PICK_UP) {
+			return charComponent.getCharacterSpriteData().getFacingDirection();
 		} else {
-			directionToDest = calculateDirectionToDestination(character);
+			return calculateDirectionToDestination(character);
 		}
-		return directionToDest;
 	}
 
 	private void rotationDone(CharacterRotationData rotationData, CharacterSpriteData characterSpriteData) {
 		rotationData.setRotating(false);
 		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
 		CharacterComponent characterComponent = ComponentsMapper.character.get(currentCommand.getCharacter());
-		boolean isPickup = characterComponent.getMotivationData().getMotivation() == TO_PICK_UP;
-		characterSpriteData.setSpriteType(isPickup ? PICKUP : RUN);
+		characterSpriteData.setSpriteType(RUN);
+		if (characterComponent.getMotivationData().getMotivation() == CharacterMotivation.TO_ATTACK) {
+			characterSpriteData.setSpriteType(decideAttackSpriteType(characterComponent.getMotivationData()));
+		} else if (characterComponent.getMotivationData().getMotivation() == CharacterMotivation.TO_PICK_UP) {
+			characterSpriteData.setSpriteType(PICKUP);
+		}
+	}
+
+	private SpriteType decideAttackSpriteType(CharacterMotivationData motivationData) {
+		SpriteType spriteType;
+		Integer motivationAdditionalData = (Integer) motivationData.getMotivationAdditionalData();
+		if (motivationAdditionalData != null && motivationAdditionalData == USE_PRIMARY) {
+			spriteType = ATTACK_PRIMARY;
+		} else {
+			spriteType = ATTACK;
+		}
+		return spriteType;
 	}
 
 	@Override
@@ -252,9 +284,18 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	@Override
+	public void onEnemyAppliedCommand(CharacterCommand auxCommand, Entity enemy) {
+		onCharacterAppliedCommand(auxCommand, enemy);
+	}
+
+	@Override
 	public void onPlayerAppliedCommand(CharacterCommand command, Entity player) {
+		onCharacterAppliedCommand(command, player);
+	}
+
+	private void onCharacterAppliedCommand(CharacterCommand command, Entity character) {
 		auxCommand.init(command);
-		applyCommand(auxCommand, player);
+		applyCommand(auxCommand, character);
 	}
 
 	private void handlePickup(final Entity character) {

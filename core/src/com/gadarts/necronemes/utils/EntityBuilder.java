@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Pools;
+import com.badlogic.gdx.utils.TimeUtils;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.enemies.Enemies;
@@ -16,6 +17,7 @@ import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.components.FloorComponent;
+import com.gadarts.necronemes.components.FlowerSkillIconComponent;
 import com.gadarts.necronemes.components.PickUpComponent;
 import com.gadarts.necronemes.components.WallComponent;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
@@ -43,6 +45,14 @@ public class EntityBuilder {
 
 	public static EntityBuilder beginBuildingEntity(final PooledEngine engine) {
 		instance.init(engine);
+		return instance;
+	}
+
+	public EntityBuilder addFlowerSkillIconComponent( ) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		FlowerSkillIconComponent component = engine.createComponent(FlowerSkillIconComponent.class);
+		component.init(TimeUtils.millis());
+		currentEntity.add(component);
 		return instance;
 	}
 
