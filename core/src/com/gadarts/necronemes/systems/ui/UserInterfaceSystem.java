@@ -26,8 +26,11 @@ import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.turns.TurnsSystemEventsSubscriber;
 import com.gadarts.necronemes.utils.EntityBuilder;
+
+import java.util.List;
 
 import static com.badlogic.gdx.Application.LOG_DEBUG;
 import static com.gadarts.necronemes.DefaultGameSettings.FULL_SCREEN;
@@ -36,7 +39,10 @@ import static com.gadarts.necronemes.Necronemes.FULL_SCREEN_RESOLUTION_WIDTH;
 import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_HEIGHT;
 import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_WIDTH;
 
-public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements InputSystemEventsSubscriber, TurnsSystemEventsSubscriber {
+public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements
+		InputSystemEventsSubscriber,
+		TurnsSystemEventsSubscriber,
+		PlayerSystemEventsSubscriber {
 	static final String TABLE_NAME_HUD = "hud";
 	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private static final Vector3 auxVector3_2 = new Vector3();
@@ -44,6 +50,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	private static final float BUTTON_PADDING = 40;
 	private final SoundPlayer soundPlayer;
 	private final boolean showBorders = DefaultGameSettings.DISPLAY_HUD_OUTLINES;
+	private final AttackNodesHandler attackNodesHandler = new AttackNodesHandler();
 	private CursorHandler cursorHandler;
 
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
@@ -55,6 +62,16 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		Table hudTable = addTable();
 		hudTable.setName(TABLE_NAME_HUD);
 		addStorageButton(hudTable);
+	}
+
+	@Override
+	public void onAttackModeActivated(List<MapGraphNode> availableNodes) {
+		attackNodesHandler.onAttackModeActivated(availableNodes);
+	}
+
+	@Override
+	public void onAttackModeDeactivated( ) {
+		attackNodesHandler.onAttackModeDeactivated();
 	}
 
 	@Override
@@ -84,12 +101,11 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		buttonStyle.up = new TextureRegionDrawable(assetsManager.getTexture(Assets.UiTextures.BUTTON_STORAGE));
 		buttonStyle.down = new TextureRegionDrawable(assetsManager.getTexture(Assets.UiTextures.BUTTON_STORAGE_DOWN));
 		buttonStyle.over = new TextureRegionDrawable(assetsManager.getTexture(Assets.UiTextures.BUTTON_STORAGE_HOVER));
-		Button button = new Button(buttonStyle);
-		return button;
+		return new Button(buttonStyle);
 	}
 
 	@SuppressWarnings("ConstantConditions")
-	private Table addTable() {
+	private Table addTable( ) {
 		Table table = new Table();
 		Stage stage = getSystemsCommonData().getUiStage();
 		stage.setDebugAll(Gdx.app.getLogLevel() == LOG_DEBUG && showBorders);
@@ -98,7 +114,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		return table;
 	}
 
-	private void createUiStage() {
+	private void createUiStage( ) {
 		int width = FULL_SCREEN ? FULL_SCREEN_RESOLUTION_WIDTH : WINDOWED_RESOLUTION_WIDTH;
 		int height = FULL_SCREEN ? FULL_SCREEN_RESOLUTION_HEIGHT : WINDOWED_RESOLUTION_HEIGHT;
 		FitViewport fitViewport = new FitViewport(width, height);
@@ -136,6 +152,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		getSystemsCommonData().setCursor(createAndAdd3dCursor());
 		cursorHandler = new CursorHandler(getSystemsCommonData());
 		cursorHandler.init();
+		attackNodesHandler.init(getEngine());
 	}
 
 	@Override
@@ -149,7 +166,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	private void onUserSelectedNodeToApplyTurn( ) {
 		MapGraphNode cursorNode = cursorHandler.getCursorNode();
 		for (UserInterfaceSystemEventsSubscriber sub : subscribers) {
-			sub.onUserSelectedNodeToApplyTurn(cursorNode);
+			sub.onUserSelectedNodeToApplyTurn(cursorNode, attackNodesHandler);
 		}
 	}
 
@@ -164,6 +181,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	@Override
 	public void dispose( ) {
 		cursorHandler.dispose();
+		attackNodesHandler.dispose();
 	}
 
 }

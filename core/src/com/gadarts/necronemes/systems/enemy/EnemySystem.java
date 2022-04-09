@@ -21,6 +21,7 @@ import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.FlowerSkillIconComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.CharacterComponent;
+import com.gadarts.necronemes.components.character.CharacterHealthData;
 import com.gadarts.necronemes.components.enemy.EnemyComponent;
 import com.gadarts.necronemes.components.sd.RelatedDecal;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
@@ -69,6 +70,7 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 	private static final float RANGE_ATTACK_MIN_RADIUS = 1.7F;
 	private static final List<MapGraphNode> auxNodesList = new ArrayList<>();
 	private static final CharacterCommand auxCommand = new CharacterCommand();
+	private static final int NUMBER_OF_SKILL_FLOWER_LEAF = 8;
 	private final List<Entity> iconsToRemove = new ArrayList<>();
 	private final List<Sounds> ambSounds = List.of(Sounds.AMB_CHAINS, Sounds.AMB_SIGH, Sounds.AMB_LAUGH);
 	private final TextureRegion skillFlowerTexture;
@@ -282,6 +284,37 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, bottom));
 		addAsPossibleNodeToLookIn(enemyNode, map.getNode(col, bottom));
 		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, bottom));
+	}
+
+	@Override
+	public void onCharacterGotDamage(final Entity entity) {
+		if (ComponentsMapper.enemy.has(entity)) {
+			if (ComponentsMapper.enemy.get(entity).getAiStatus() != ATTACKING) {
+				awakeEnemy(entity);
+			}
+			refreshSkillFlower(entity);
+		}
+	}
+
+	private void refreshSkillFlower(final Entity entity) {
+		List<RelatedDecal> relatedDecals = ComponentsMapper.simpleDecal.get(entity).getRelatedDecals();
+		CharacterHealthData healthData = ComponentsMapper.character.get(entity).getSkills().getHealthData();
+		float div = (((float) healthData.getHp()) / ((float) healthData.getInitialHp()));
+		int numberOfVisibleLeaf = (int) (div * NUMBER_OF_SKILL_FLOWER_LEAF);
+		for (int i = 0; i < relatedDecals.size(); i++) {
+			relatedDecals.get(i).setVisible(i < numberOfVisibleLeaf);
+		}
+	}
+
+	@Override
+	public void onCharacterDies(final Entity character) {
+		if (ComponentsMapper.enemy.has(character)) {
+			EnemyComponent enemyComponent = ComponentsMapper.enemy.get(character);
+			if (enemyComponent.getAiStatus() != IDLE) {
+				enemyComponent.setAiStatus(IDLE);
+			}
+			character.remove(SimpleDecalComponent.class);
+		}
 	}
 
 	private void initializePathPlanRequest(MapGraphNode destinationNode,

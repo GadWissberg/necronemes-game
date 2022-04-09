@@ -1,9 +1,13 @@
 package com.gadarts.necronemes.systems.character;
 
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
@@ -13,11 +17,15 @@ import com.gadarts.necromine.model.characters.CharacterTypes;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.attributes.Agility;
+import com.gadarts.necromine.model.characters.attributes.Strength;
+import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
+import com.gadarts.necronemes.components.player.PlayerComponent;
+import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphConnection;
 import com.gadarts.necronemes.map.MapGraphNode;
@@ -28,7 +36,10 @@ import com.gadarts.necronemes.systems.enemy.EnemySystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
 
+import java.util.Map;
+
 import static com.gadarts.necromine.model.characters.SpriteType.*;
+import static com.gadarts.necronemes.components.ComponentsMapper.*;
 import static com.gadarts.necronemes.components.character.CharacterMotivation.*;
 import static com.gadarts.necronemes.map.MapGraphConnectionCosts.CLEAN;
 import static com.gadarts.necronemes.utils.GeneralUtils.EPSILON;
@@ -44,10 +55,26 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	private static final Vector2 auxVector2_3 = new Vector2();
 	private static final CharacterCommand auxCommand = new CharacterCommand();
 	private static final float CHARACTER_STEP_SIZE = 0.22f;
+	private static final long CHARACTER_PAIN_DURATION = 1000;
+	private final static Vector3 auxVector3_3 = new Vector3();
+	private final static Vector3 auxVector3_4 = new Vector3();
 	private final MapGraphPath currentPath = new MapGraphPath();
+	private final Map<SpriteType, OnFrameChangedEvent> onFrameChangedEvents = Map.of(
+			RUN, this::applyRunning,
+			PICKUP, this::handlePickup,
+			ATTACK, this::applyMeleeAttack,
+			ATTACK_PRIMARY, this::applyPrimaryAttack
+	);
+	private ImmutableArray<Entity> characters;
 
 	public CharacterSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
 		super(systemsCommonData, soundPlayer, assetsManager);
+	}
+
+	@Override
+	public void addedToEngine(Engine engine) {
+		super.addedToEngine(engine);
+		characters = getEngine().getEntitiesFor(Family.all(CharacterComponent.class).get());
 	}
 
 	@Override
@@ -138,6 +165,71 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		if (currentCommand != null) {
 			handleCurrentCommand(currentCommand);
 		}
+		for (Entity character : characters) {
+			handlePain(character);
+		}
+	}
+
+	private void handlePain(final Entity character) {
+		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
+		long lastDamage = characterComponent.getSkills().getHealthData().getLastDamage();
+		CharacterSpriteData spriteData = characterComponent.getCharacterSpriteData();
+		if (spriteData.getSpriteType() == PAIN && TimeUtils.timeSinceMillis(lastDamage) > CHARACTER_PAIN_DURATION) {
+			painDone(character, characterComponent, spriteData);
+		}
+	}
+
+	private void applyDamageToCharacter(final Entity attacked, final int damage) {
+		CharacterComponent characterComponent = character.get(attacked);
+		characterComponent.dealDamage(damage);
+		handleDeath(attacked);
+	}
+
+	private void handleDeath(final Entity character) {
+		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
+		CharacterHealthData healthData = characterComponent.getSkills().getHealthData();
+		CharacterSoundData soundData = characterComponent.getSoundData();
+		if (healthData.getHp() <= 0) {
+			characterDies(character, characterComponent, soundData);
+		} else {
+			characterInPain(character, characterComponent, healthData, soundData);
+		}
+	}
+
+	private void characterInPain(Entity character,
+								 CharacterComponent characterComponent,
+								 CharacterHealthData healthData,
+								 CharacterSoundData soundData) {
+		getSoundPlayer().playSound(soundData.getPainSound());
+		characterComponent.getCharacterSpriteData().setSpriteType(PAIN);
+		for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onCharacterGotDamage(character);
+		}
+		if (healthData.getHp() > 0) {
+			characterComponent.setMotivation(null);
+		}
+	}
+
+	private void characterDies(Entity character, CharacterComponent characterComponent, CharacterSoundData soundData) {
+		CharacterSpriteData charSpriteData = characterComponent.getCharacterSpriteData();
+		charSpriteData.setSpriteType(charSpriteData.isSingleDeathAnimation() ? LIGHT_DEATH_1 : randomLightDeath());
+		if (animation.has(character)) {
+			animation.get(character).resetStateTime();
+		}
+		characterComponent.setMotivation(null);
+		getSoundPlayer().playSound(soundData.getDeathSound());
+		for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onCharacterDies(character);
+		}
+	}
+
+	private void painDone(Entity character, CharacterComponent characterComponent, CharacterSpriteData spriteData) {
+		characterComponent.setMotivation(null);
+		spriteData.setSpriteType(IDLE);
+		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
+		if (currentCommand != null && !currentCommand.isStarted()) {
+			applyCommand(currentCommand, character);
+		}
 	}
 
 	public void commandDone(final Entity character) {
@@ -153,7 +245,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private void handleModeWithNonLoopingAnimation(final Entity character) {
-		AnimationComponent animationComponent = ComponentsMapper.animation.get(character);
+		AnimationComponent animationComponent = animation.get(character);
 		Animation<TextureAtlas.AtlasRegion> animation = animationComponent.getAnimation();
 		if (animation.isAnimationFinished(animationComponent.getStateTime())) {
 			SpriteType spriteType = ComponentsMapper.character.get(character).getCharacterSpriteData().getSpriteType();
@@ -181,7 +273,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private void handleCurrentCommand(final CharacterCommand currentCommand) {
-		CharacterComponent characterComponent = ComponentsMapper.character.get(currentCommand.getCharacter());
+		CharacterComponent characterComponent = character.get(currentCommand.getCharacter());
 		SpriteType spriteType = characterComponent.getCharacterSpriteData().getSpriteType();
 		if (spriteType == ATTACK || spriteType == PICKUP || spriteType == ATTACK_PRIMARY) {
 			handleModeWithNonLoopingAnimation(currentCommand.getCharacter());
@@ -193,7 +285,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private Direction calculateDirectionToDestination(final Entity character) {
-		Vector3 characterPos = auxVector3_1.set(ComponentsMapper.characterDecal.get(character).getDecal().getPosition());
+		Vector3 characterPos = auxVector3_1.set(characterDecal.get(character).getDecal().getPosition());
 		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
 		MapGraphNode destinationNode = characterComponent.getDestinationNode();
 		Vector2 destPos = destinationNode.getCenterPosition(auxVector2_2);
@@ -227,11 +319,11 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private Direction calculateDirectionToTarget(final Entity character) {
-		Vector3 pos = auxVector3_1.set(ComponentsMapper.characterDecal.get(character).getDecal().getPosition());
+		Vector3 pos = auxVector3_1.set(characterDecal.get(character).getDecal().getPosition());
 		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
 		Entity target = characterComponent.getTarget();
 		MapGraph map = getSystemsCommonData().getMap();
-		MapGraphNode targetNode = map.getNode(ComponentsMapper.characterDecal.get(target).getDecal().getPosition());
+		MapGraphNode targetNode = map.getNode(characterDecal.get(target).getDecal().getPosition());
 		Vector2 destPos = targetNode.getCenterPosition(auxVector2_2);
 		Vector2 directionToDest = destPos.sub(pos.x, pos.z).nor();
 		return Direction.findDirection(directionToDest);
@@ -253,7 +345,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	private void rotationDone(CharacterRotationData rotationData, CharacterSpriteData characterSpriteData) {
 		rotationData.setRotating(false);
 		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
-		CharacterComponent characterComponent = ComponentsMapper.character.get(currentCommand.getCharacter());
+		CharacterComponent characterComponent = character.get(currentCommand.getCharacter());
 		characterSpriteData.setSpriteType(RUN);
 		if (characterComponent.getMotivationData().getMotivation() == CharacterMotivation.TO_ATTACK) {
 			characterSpriteData.setSpriteType(decideAttackSpriteType(characterComponent.getMotivationData()));
@@ -298,38 +390,77 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		applyCommand(auxCommand, character);
 	}
 
-	private void handlePickup(final Entity character) {
-		CharacterMotivation mode = ComponentsMapper.character.get(character).getMotivationData().getMotivation();
-		CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
-		if (mode == TO_PICK_UP && currentCommand.getAdditionalData() != null) {
-			Entity itemPickedUp = (Entity) currentCommand.getAdditionalData();
-			for (CharacterSystemEventsSubscriber subscriber : subscribers) {
-				subscriber.onItemPickedUp(itemPickedUp);
+	private void handlePickup(Entity character, TextureAtlas.AtlasRegion newFrame) {
+		if (newFrame.index == 1 && animation.get(character).isDoingReverse()) {
+			CharacterMotivation mode = ComponentsMapper.character.get(character).getMotivationData().getMotivation();
+			CharacterCommand currentCommand = getSystemsCommonData().getCurrentCommand();
+			if (mode == TO_PICK_UP && currentCommand.getAdditionalData() != null) {
+				Entity itemPickedUp = (Entity) currentCommand.getAdditionalData();
+				for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+					subscriber.onItemPickedUp(itemPickedUp);
+				}
 			}
 		}
+	}
+
+	private void applyMeleeDamageToCharacter(final Entity attacker, final Entity attacked) {
+		Strength strength = character.get(attacker).getSkills().getStrength();
+		applyDamageToCharacter(attacked, MathUtils.random(strength.getMinDamage(), strength.getMaxDamage()));
 	}
 
 	@Override
 	public void onFrameChanged(final Entity character, final float deltaTime, final TextureAtlas.AtlasRegion newFrame) {
 		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
 		CharacterSpriteData characterSpriteData = characterComponent.getCharacterSpriteData();
-		if (characterSpriteData.getSpriteType() == RUN) {
-			applyRunning(character, newFrame, characterComponent);
-		} else if (characterSpriteData.getSpriteType() == PICKUP) {
-			if (newFrame.index == 1 && ComponentsMapper.animation.get(character).isDoingReverse()) {
-				handlePickup(character);
+		OnFrameChangedEvent onFrameChangedEvent = onFrameChangedEvents.get(characterSpriteData.getSpriteType());
+		if (onFrameChangedEvent != null) {
+			onFrameChangedEvent.run(character, newFrame);
+		}
+	}
+
+	private void applyPrimaryAttack(Entity character,
+									TextureAtlas.AtlasRegion newFrame) {
+		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
+		if (newFrame.index == characterComponent.getCharacterSpriteData().getPrimaryAttackHitFrameIndex()) {
+			CharacterDecalComponent charDecalComp = characterDecal.get(character);
+			MapGraphNode positionNode = getSystemsCommonData().getMap().getNode(charDecalComp.getDecal().getPosition());
+			Vector3 positionNodeCenterPosition = positionNode.getCenterPosition(auxVector3_4);
+			Vector3 direction = calculateDirectionToTarget(characterComponent, positionNodeCenterPosition);
+			for (CharacterSystemEventsSubscriber subscriber : subscribers) {
+				subscriber.onCharacterEngagesPrimaryAttack(character, direction, positionNodeCenterPosition);
 			}
 		}
 	}
 
-	private void applyRunning(final Entity character,
-							  final TextureAtlas.AtlasRegion newFrame,
-							  final CharacterComponent characterComponent) {
-		if (newFrame.index == 0 || newFrame.index == 5) {
-			getSoundPlayer().playSound(characterComponent.getSoundData().getStepSound());
+	private Vector3 calculateDirectionToTarget(CharacterComponent characterComp, Vector3 positionNodeCenterPosition) {
+		CharacterDecalComponent targetDecalComp = characterDecal.get(characterComp.getTarget());
+		MapGraphNode targetNode = getSystemsCommonData().getMap().getNode(targetDecalComp.getDecal().getPosition());
+		Vector3 targetNodeCenterPosition = targetNode.getCenterPosition(auxVector3_3);
+		targetNodeCenterPosition.y += 0.5f;
+		return targetNodeCenterPosition.sub(positionNodeCenterPosition);
+	}
+
+	private void applyMeleeAttack(Entity character,
+								  TextureAtlas.AtlasRegion newFrame) {
+		CharacterComponent characterComponent = ComponentsMapper.character.get(character);
+		if (newFrame.index != characterComponent.getCharacterSpriteData().getMeleeHitFrameIndex()) return;
+		Entity target = characterComponent.getTarget();
+		if (player.has(character)) {
+			if (((WeaponsDefinitions) getSystemsCommonData().getStorage().getSelectedWeapon().getDefinition()).isMelee()) {
+				applyMeleeDamageToCharacter(character, target);
+			}
+		} else {
+			applyMeleeDamageToCharacter(character, target);
 		}
-		MapGraphNode dest = characterComponent.getDestinationNode();
-		Decal decal = ComponentsMapper.characterDecal.get(character).getDecal();
+	}
+
+	private void applyRunning(final Entity character,
+							  final TextureAtlas.AtlasRegion newFrame) {
+		if (newFrame.index == 0 || newFrame.index == 5) {
+			getSoundPlayer().playSound(ComponentsMapper.character.get(character).getSoundData().getStepSound());
+		}
+		MapGraphNode dest = ComponentsMapper.character.get(character).getDestinationNode();
+		Decal decal = characterDecal.get(character).getDecal();
 		if (auxVector2_1.set(decal.getX(), decal.getZ()).dst2(dest.getCenterPosition(auxVector2_2)) < EPSILON) {
 			reachedNodeOfPath(character, dest);
 		} else {
@@ -338,7 +469,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private void takeStep(final Entity entity) {
-		CharacterDecalComponent characterDecalComponent = ComponentsMapper.characterDecal.get(entity);
+		CharacterDecalComponent characterDecalComponent = characterDecal.get(entity);
 		MapGraph map = getSystemsCommonData().getMap();
 		MapGraphNode oldNode = map.getNode(characterDecalComponent.getNodePosition(auxVector2_3));
 		translateCharacter(entity, characterDecalComponent);
@@ -349,7 +480,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private void fixHeightPositionOfDecals(final Entity entity, final MapGraphNode newNode) {
-		CharacterDecalComponent characterDecalComponent = ComponentsMapper.characterDecal.get(entity);
+		CharacterDecalComponent characterDecalComponent = characterDecal.get(entity);
 		Decal decal = characterDecalComponent.getDecal();
 		Vector3 position = decal.getPosition();
 		float newNodeHeight = newNode.getHeight();
@@ -364,7 +495,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	private void translateCharacter(final Entity entity, final CharacterDecalComponent characterDecalComponent) {
-		ComponentsMapper.character.get(entity).getDestinationNode().getCenterPosition(auxVector2_2);
+		character.get(entity).getDestinationNode().getCenterPosition(auxVector2_2);
 		Decal decal = characterDecalComponent.getDecal();
 		Vector2 velocity = auxVector2_2.sub(auxVector2_1.set(decal.getX(), decal.getZ())).nor().scl(CHARACTER_STEP_SIZE);
 		decal.translate(auxVector3_1.set(velocity.x, 0, velocity.y));
@@ -380,5 +511,9 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		} else {
 			destinationReached(character);
 		}
+	}
+
+	private interface OnFrameChangedEvent {
+		void run(Entity character, TextureAtlas.AtlasRegion newFrame);
 	}
 }

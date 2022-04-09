@@ -1,22 +1,21 @@
 package com.gadarts.necronemes.utils;
 
+import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
-import com.badlogic.gdx.math.Intersector;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Plane;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.math.collision.Ray;
 import com.gadarts.necromine.assets.Assets;
-import com.gadarts.necronemes.map.CalculatePathRequest;
-import com.gadarts.necronemes.map.GameHeuristic;
-import com.gadarts.necronemes.map.GamePathFinder;
-import com.gadarts.necronemes.map.MapGraphPath;
+import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
+import com.gadarts.necronemes.map.*;
+import com.gadarts.necronemes.systems.player.PathPlanHandler;
 import com.google.gson.JsonObject;
+
+import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
 
 public class GeneralUtils {
 	public static final float EPSILON = 0.025f;
 	private static final Plane floorPlane = new Plane(new Vector3(0, 1, 0), 0);
+	private static final Vector2 auxVector2_1 = new Vector2();
 
 	/**
 	 * Whether given contained is fully inside the container.
@@ -86,4 +85,5 @@ public class GeneralUtils {
 		outputPath.clear();
 		return pathFinder.searchNodePathBeforeCommand(heuristic, request);
 	}
+
 }

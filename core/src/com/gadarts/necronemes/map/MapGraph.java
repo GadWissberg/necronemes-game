@@ -25,6 +25,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MapGraph implements IndexedGraph<MapGraphNode> {
@@ -32,6 +33,8 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private static final Array<Connection<MapGraphNode>> auxConnectionsList = new Array<>();
 	private static final float PASSABLE_MAX_HEIGHT_DIFF = 0.3f;
 	private final static Vector2 auxVector2 = new Vector2();
+	private static final List<MapGraphNode> auxNodesList_1 = new ArrayList<>();
+	private static final List<MapGraphNode> auxNodesList_2 = new ArrayList<>();
 	private final Dimension mapSize;
 	@Getter
 	private final Array<MapGraphNode> nodes;
@@ -213,6 +216,19 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 			result = findConnectionBetweenTwoNodes(node2, node1);
 		}
 		return result;
+	}
+
+	public List<MapGraphNode> getAvailableNodesAroundNode(final MapGraphNode node) {
+		auxNodesList_1.clear();
+		auxNodesList_2.clear();
+		List<MapGraphNode> nodesAround = getNodesAround(node, auxNodesList_1);
+		List<MapGraphNode> availableNodes = auxNodesList_2;
+		for (MapGraphNode nearbyNode : nodesAround) {
+			if (nearbyNode.getType() == MapNodesTypes.PASSABLE_NODE && getAliveEnemyFromNode(nearbyNode) == null) {
+				availableNodes.add(nearbyNode);
+			}
+		}
+		return availableNodes;
 	}
 
 	private MapGraphConnection findConnectionBetweenTwoNodes(MapGraphNode src, MapGraphNode dst) {

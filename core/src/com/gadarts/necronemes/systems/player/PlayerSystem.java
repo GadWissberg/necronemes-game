@@ -7,33 +7,40 @@ import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
+import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.player.Weapon;
-import com.gadarts.necronemes.map.CalculatePathRequest;
-import com.gadarts.necronemes.map.MapGraph;
-import com.gadarts.necronemes.map.MapGraphConnectionCosts;
-import com.gadarts.necronemes.map.MapGraphNode;
-import com.gadarts.necronemes.map.MapGraphPath;
+import com.gadarts.necronemes.map.*;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.character.CharacterCommand;
+import com.gadarts.necronemes.systems.character.CharacterCommands;
 import com.gadarts.necronemes.systems.character.CharacterSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.ui.AttackNodesHandler;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
-import com.gadarts.necronemes.utils.GeneralUtils;
 
-import static com.gadarts.necronemes.systems.character.CharacterCommands.GO_TO;
-import static com.gadarts.necronemes.systems.character.CharacterCommands.GO_TO_PICKUP;
+import java.util.List;
 
-public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> implements UserInterfaceSystemEventsSubscriber, CharacterSystemEventsSubscriber {
+import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
+import static com.gadarts.necronemes.components.ComponentsMapper.player;
+import static com.gadarts.necronemes.map.MapGraphConnectionCosts.CLEAN;
+import static com.gadarts.necronemes.systems.character.CharacterCommands.*;
+import static com.gadarts.necronemes.utils.GeneralUtils.calculatePath;
+
+public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> implements
+		UserInterfaceSystemEventsSubscriber,
+		CharacterSystemEventsSubscriber {
 	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final CalculatePathRequest request = new CalculatePathRequest();
 	private static final CharacterCommand auxCommand = new CharacterCommand();
@@ -57,7 +64,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 
 	@Override
 	public void onCharacterCommandDone(final Entity character, final CharacterCommand executedCommand) {
-		if (ComponentsMapper.player.has(character)) {
+		if (player.has(character)) {
 			for (PlayerSystemEventsSubscriber subscriber : subscribers) {
 				subscriber.onPlayerFinishedTurn();
 			}
@@ -77,26 +84,70 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void onUserSelectedNodeToApplyTurn(MapGraphNode node) {
-		applyPlayerTurn(node);
+	public void onUserSelectedNodeToApplyTurn(MapGraphNode node, AttackNodesHandler attackNodesHandler) {
+		applyPlayerTurn(node, attackNodesHandler);
 	}
 
-	private void applyPlayerTurn(final MapGraphNode cursorNode) {
-		int pathSize = playerPathPlanner.getCurrentPath().getCount();
-		if (!playerPathPlanner.getCurrentPath().nodes.isEmpty() && playerPathPlanner.getCurrentPath().get(pathSize - 1).equals(cursorNode)) {
-			applyPlayerCommandAccordingToPlan();
+	private void applyPlayerTurn(final MapGraphNode cursorNode, AttackNodesHandler attackNodesHandler) {
+		MapGraphPath currentPath = playerPathPlanner.getCurrentPath();
+		int pathSize = currentPath.getCount();
+		if (!currentPath.nodes.isEmpty() && currentPath.get(pathSize - 1).equals(cursorNode)) {
+			applyPlayerCommandAccordingToPlan(cursorNode, attackNodesHandler);
 		} else {
-			planPath(cursorNode);
+			planPath(cursorNode, attackNodesHandler);
 		}
 	}
 
-	private void planPath(final MapGraphNode cursorNode) {
-		if (calculatePathAccordingToSelection(cursorNode)) {
-			pathHasCreated();
+	private void planPath(final MapGraphNode cursorNode, AttackNodesHandler attackNodesHandler) {
+		Entity enemyAtNode = getSystemsCommonData().getMap().getAliveEnemyFromNode(cursorNode);
+		if (!calculatePathAccordingToSelection(cursorNode, enemyAtNode)) return;
+		MapGraphNode selectedAttackNode = attackNodesHandler.getSelectedAttackNode();
+		SystemsCommonData commonData = getSystemsCommonData();
+		Entity highLightedPickup = commonData.getCurrentHighLightedPickup();
+		if (highLightedPickup != null || isSelectedAttackNodeIsNotInAvailableNodes(cursorNode, selectedAttackNode)) {
+			attackNodesHandler.reset();
+		}
+		pathHasCreated(cursorNode, enemyAtNode, attackNodesHandler);
+	}
+
+	private boolean isSelectedAttackNodeIsNotInAvailableNodes(MapGraphNode cursorNode, MapGraphNode selectedAttackNode) {
+		MapGraph map = getSystemsCommonData().getMap();
+		return selectedAttackNode != null
+				&& !isNodeInAvailableNodes(cursorNode, map.getAvailableNodesAroundNode(selectedAttackNode));
+	}
+
+	private void enemySelected(final MapGraphNode node, final Entity enemyAtNode, final AttackNodesHandler attackNodesHandler) {
+		Weapon selectedWeapon = getSystemsCommonData().getStorage().getSelectedWeapon();
+		if (selectedWeapon.isMelee()) {
+			List<MapGraphNode> availableNodes = getSystemsCommonData().getMap().getAvailableNodesAroundNode(node);
+			attackNodesHandler.setSelectedAttackNode(node);
+			activateAttackMode(enemyAtNode, availableNodes);
+		} else {
+			playerPathPlanner.resetPlan();
+			enemySelectedWithRangeWeapon(node);
 		}
 	}
 
-	private void pathHasCreated( ) {
+	private void enemySelectedWithRangeWeapon(final MapGraphNode node) {
+		Entity player = getSystemsCommonData().getPlayer();
+		CharacterComponent characterComponent = ComponentsMapper.character.get(player);
+		Weapon selectedWeapon = getSystemsCommonData().getStorage().getSelectedWeapon();
+		WeaponsDefinitions definition = (WeaponsDefinitions) selectedWeapon.getDefinition();
+		characterComponent.getCharacterSpriteData().setMeleeHitFrameIndex(definition.getHitFrameIndex());
+		characterComponent.setTarget(getSystemsCommonData().getMap().getAliveEnemyFromNode(node));
+	}
+
+	private void activateAttackMode(final Entity enemyAtNode, final List<MapGraphNode> availableNodes) {
+		ComponentsMapper.character.get(getSystemsCommonData().getPlayer()).setTarget(enemyAtNode);
+		for (PlayerSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onAttackModeActivated(availableNodes);
+		}
+	}
+
+	private void pathHasCreated(MapGraphNode cursorNode, Entity enemyAtNode, AttackNodesHandler attackNodesHandler) {
+		if (enemyAtNode != null) {
+			enemySelected(cursorNode, enemyAtNode, attackNodesHandler);
+		}
 		for (PlayerSystemEventsSubscriber subscriber : subscribers) {
 			subscriber.onPlayerPathCreated();
 		}
@@ -104,11 +155,43 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		playerPathPlanner.displayPathPlan(ComponentsMapper.character.get(player).getSkills().getAgility());
 	}
 
-	private boolean calculatePathAccordingToSelection(final MapGraphNode cursorNode) {
+	public boolean calculatePathToCharacter(MapGraphNode sourceNode,
+											Entity character,
+											boolean avoidCharactersInCalculation,
+											MapGraphConnectionCosts maxCostPerNodeConnection) {
+		playerPathPlanner.getCurrentPath().clear();
+		CharacterDecalComponent characterDecalComponent = characterDecal.get(character);
+		Vector2 cellPosition = characterDecalComponent.getNodePosition(auxVector2_1);
+		MapGraphNode destNode = getSystemsCommonData().getMap().getNode((int) cellPosition.x, (int) cellPosition.y);
+		initializePathPlanRequest(sourceNode, destNode, maxCostPerNodeConnection, avoidCharactersInCalculation);
+		return playerPathPlanner.getPathFinder().searchNodePathBeforeCommand(playerPathPlanner.getHeuristic(), request);
+	}
+
+	private void initializePathPlanRequest(MapGraphNode sourceNode,
+										   MapGraphNode destinationNode,
+										   MapGraphConnectionCosts maxCostInclusive,
+										   boolean avoidCharactersInCalculations) {
+		request.setSourceNode(sourceNode);
+		request.setDestNode(destinationNode);
+		request.setOutputPath(playerPathPlanner.getCurrentPath());
+		request.setAvoidCharactersInCalculations(avoidCharactersInCalculations);
+		request.setMaxCostInclusive(maxCostInclusive);
+	}
+
+	private boolean calculatePathAccordingToSelection(final MapGraphNode cursorNode, Entity enemyAtNode) {
 		CharacterDecalComponent charDecalComp = ComponentsMapper.characterDecal.get(getSystemsCommonData().getPlayer());
 		MapGraphPath plannedPath = playerPathPlanner.getCurrentPath();
 		initializePathPlanRequest(cursorNode, charDecalComp, plannedPath);
-		return GeneralUtils.calculatePath(request, playerPathPlanner.getPathFinder(), playerPathPlanner.getHeuristic());
+		Vector2 cellPosition = charDecalComp.getNodePosition(auxVector2_1);
+		MapGraphNode playerNode = getSystemsCommonData().getMap().getNode(cellPosition);
+		return calculatePathToEnemy(enemyAtNode, playerNode)
+				|| calculatePath(request, playerPathPlanner.getPathFinder(), playerPathPlanner.getHeuristic());
+	}
+
+	private boolean calculatePathToEnemy(Entity enemyAtNode, MapGraphNode playerNode) {
+		return enemyAtNode != null
+				&& ComponentsMapper.character.get(enemyAtNode).getSkills().getHealthData().getHp() > 0
+				&& calculatePathToCharacter(playerNode, enemyAtNode, true, CLEAN);
 	}
 
 	private void initializePathPlanRequest(MapGraphNode cursorNode,
@@ -118,18 +201,66 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		request.setDestNode(cursorNode);
 		request.setOutputPath(plannedPath);
 		request.setAvoidCharactersInCalculations(true);
-		request.setMaxCostInclusive(MapGraphConnectionCosts.CLEAN);
+		request.setMaxCostInclusive(CLEAN);
 	}
 
-	private void applyPlayerCommandAccordingToPlan( ) {
+	private void applyPlayerCommandAccordingToPlan(MapGraphNode cursorNode, AttackNodesHandler attackNodesHandler) {
 		playerPathPlanner.hideAllArrows();
 		SystemsCommonData commonData = getSystemsCommonData();
 		CharacterDecalComponent charDecalComp = ComponentsMapper.characterDecal.get(commonData.getPlayer());
 		MapGraphNode playerNode = commonData.getMap().getNode(charDecalComp.getNodePosition(auxVector2_1));
+		if (attackNodesHandler.getSelectedAttackNode() == null) {
+			applyCommandWhenNoAttackNodeSelected(commonData, playerNode);
+		} else {
+			applyPlayerMeleeCommand(cursorNode, playerNode, attackNodesHandler);
+		}
+	}
+
+	private void applyCommandWhenNoAttackNodeSelected(SystemsCommonData commonData, MapGraphNode playerNode) {
 		if (commonData.getItemToPickup() != null || isPickupAndPlayerOnSameNode(commonData.getMap(), playerNode)) {
-			applyGoToPickupCommand(playerPathPlanner.getCurrentPath(), commonData.getItemToPickup());
+			applyPlayerCommand(GO_TO_PICKUP, commonData.getItemToPickup());
 		} else {
 			applyGoToCommand(playerPathPlanner.getCurrentPath());
+		}
+	}
+
+	private boolean isNodeInAvailableNodes(final MapGraphNode node, final List<MapGraphNode> availableNodes) {
+		boolean result = false;
+		for (MapGraphNode availableNode : availableNodes) {
+			if (availableNode.equals(node)) {
+				result = true;
+				break;
+			}
+		}
+		return result;
+	}
+
+	private void applyPlayerMeleeCommand(final MapGraphNode targetNode,
+										 final MapGraphNode playerNode,
+										 final AttackNodesHandler attackNodesHandler) {
+		MapGraphNode attackNode = attackNodesHandler.getSelectedAttackNode();
+		boolean result = targetNode.equals(attackNode);
+		MapGraph map = getSystemsCommonData().getMap();
+		result |= isNodeInAvailableNodes(targetNode, map.getAvailableNodesAroundNode(attackNode));
+		result |= targetNode.equals(attackNode) && playerNode.isConnectedNeighbour(attackNode);
+		if (result) {
+			calculatePathToMelee(targetNode, map);
+			applyPlayerCommand(GO_TO_MELEE);
+		}
+		deactivateAttackMode(attackNodesHandler);
+	}
+
+	private void calculatePathToMelee(MapGraphNode targetNode, MapGraph map) {
+		if (map.getAliveEnemyFromNode(targetNode) != null) {
+			Array<MapGraphNode> nodes = playerPathPlanner.getCurrentPath().nodes;
+			nodes.removeIndex(nodes.size - 1);
+		}
+	}
+
+	private void deactivateAttackMode(AttackNodesHandler attackNodesHandler) {
+		attackNodesHandler.setSelectedAttackNode(null);
+		for (PlayerSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onAttackModeDeactivated();
 		}
 	}
 
@@ -141,9 +272,13 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		return map.getNode(pickupPosition).equals(playerNode);
 	}
 
-	private void applyGoToPickupCommand(final MapGraphPath path, final Entity itemToPickup) {
+	private void applyPlayerCommand(CharacterCommands commandDefinition) {
+		applyPlayerCommand(commandDefinition, null);
+	}
+
+	private void applyPlayerCommand(CharacterCommands CommandDefinition, Object additionalData) {
 		Entity player = getSystemsCommonData().getPlayer();
-		auxCommand.init(GO_TO_PICKUP, path, player, itemToPickup);
+		auxCommand.init(CommandDefinition, playerPathPlanner.getCurrentPath(), player, additionalData);
 		subscribers.forEach(sub -> sub.onPlayerAppliedCommand(auxCommand, player));
 	}
 
@@ -153,8 +288,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		Entity player = systemsCommonData.getPlayer();
 		MapGraphNode playerNode = map.getNode(ComponentsMapper.characterDecal.get(player).getDecal().getPosition());
 		if (path.getCount() > 0 && !playerNode.equals(path.get(path.getCount() - 1))) {
-			CharacterCommand command = auxCommand.init(GO_TO, path, player);
-			subscribers.forEach(sub -> sub.onPlayerAppliedCommand(command, player));
+			applyPlayerCommand(GO_TO);
 		}
 	}
 
@@ -164,7 +298,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void initializeData() {
+	public void initializeData( ) {
 		playerPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());
 		playerPathPlanner.init((PooledEngine) getEngine());
 	}
@@ -177,7 +311,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		getSystemsCommonData().getStorage().setSelectedWeapon(weapon);
 	}
 
-	private Weapon initializeStartingWeapon() {
+	private Weapon initializeStartingWeapon( ) {
 		Weapon weapon = Pools.obtain(Weapon.class);
 		Texture image = getAssetsManager().getTexture(DefaultGameSettings.STARTING_WEAPON.getImage());
 		weapon.init(DefaultGameSettings.STARTING_WEAPON, 0, 0, image);
@@ -185,7 +319,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void dispose() {
+	public void dispose( ) {
 		getSystemsCommonData().getStorage().clear();
 	}
 }
