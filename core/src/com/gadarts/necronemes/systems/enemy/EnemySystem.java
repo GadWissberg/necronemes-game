@@ -203,7 +203,8 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 
 	private boolean checkIfPrimaryAttackIsReady(final EnemyComponent enemyComponent, final int turnsDiff) {
 		long currentTurnId = getSystemsCommonData().getCurrentTurnId();
-		return currentTurnId - enemyComponent.getTimeStamps().getLastPrimaryAttack() > turnsDiff;
+		long lastPrimaryAttack = enemyComponent.getTimeStamps().getLastPrimaryAttack();
+		return lastPrimaryAttack < 0 || currentTurnId - lastPrimaryAttack > turnsDiff;
 	}
 
 	private boolean considerPrimaryAttack(final Entity enemy,
@@ -224,12 +225,12 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		return false;
 	}
 
-	private boolean checkIfFloorNodesContainsEnemy(final Array<GridPoint2> nodes) {
+	private boolean checkIfFloorNodesContainsEnemy(final Array<GridPoint2> nodes, Entity enemyToCheckFor) {
 		boolean result = false;
 		for (GridPoint2 point : nodes) {
 			MapGraph map = getSystemsCommonData().getMap();
 			Entity enemy = map.getAliveEnemyFromNode(map.getNode(point.x, point.y));
-			if (enemy != null) {
+			if (enemy != null && enemy != enemyToCheckFor) {
 				result = true;
 				break;
 			}
@@ -241,7 +242,7 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		Array<GridPoint2> nodes = findAllNodesToTarget(enemy);
 		boolean blocked = checkIfFloorNodesBlockSightToTarget(enemy, nodes);
 		if (!blocked) {
-			blocked = checkIfFloorNodesContainsEnemy(nodes);
+			blocked = checkIfFloorNodesContainsEnemy(nodes, enemy);
 		}
 		return blocked;
 	}
@@ -466,17 +467,10 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 					awakeEnemyIfTargetSpotted(enemy);
 				} else if (!isTargetInFov(enemy) || checkIfFloorNodesBlockSightToTarget(enemy)) {
 					enemyComponent.setAiStatus(RUNNING_TO_LAST_SEEN_POSITION);
-					updateEnemyTargetLastVisibleNode(enemy, enemyComponent);
+					enemyComponent.setTargetLastVisibleNode(oldNode);
 				}
 			}
 		}
-	}
-
-	private void updateEnemyTargetLastVisibleNode(final Entity enemy, final EnemyComponent enemyComponent) {
-		Entity target = character.get(enemy).getTarget();
-		Vector2 nodePosition = characterDecal.get(target).getNodePosition(auxVector2_1);
-		MapGraphNode node = getSystemsCommonData().getMap().getNode(nodePosition);
-		enemyComponent.setTargetLastVisibleNode(node);
 	}
 
 	@Override

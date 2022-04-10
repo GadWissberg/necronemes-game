@@ -11,6 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CharacterComponent implements GameComponent {
+	public final static float CHAR_RAD = 0.3f;
 
 	private static final Vector2 auxVector = new Vector2();
 

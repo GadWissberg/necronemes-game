@@ -8,7 +8,6 @@ import com.gadarts.necromine.model.characters.enemies.Enemies;
 import com.gadarts.necronemes.components.GameComponent;
 import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.enemy.EnemyAiStatus;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,7 +17,6 @@ public class EnemyComponent implements GameComponent {
 	public static final int ROAM_SOUND_INTERVAL_MINIMUM = 5000;
 	public static final int ROAM_SOUND_INTERVAL_MAXIMUM = 10000;
 
-	@Setter(AccessLevel.NONE)
 	private MapGraphNode targetLastVisibleNode;
 	private long nextRoamSound;
 	private Enemies enemyDefinition;
@@ -28,10 +26,6 @@ public class EnemyComponent implements GameComponent {
 	private Animation<TextureAtlas.AtlasRegion> bulletAnimation;
 	private long iconDisplayInFlowerTimeStamp;
 	private boolean displayIconInFlower;
-
-	public void setTargetLastVisibleNode(final MapGraphNode coords) {
-		targetLastVisibleNode = coords;
-	}
 
 	public void init(final Enemies enemyDefinition,
 					 final int skill,

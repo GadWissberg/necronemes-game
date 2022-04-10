@@ -45,6 +45,7 @@ import com.gadarts.necronemes.systems.enemy.EnemyAiStatus;
 import java.util.List;
 
 import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
+import static com.gadarts.necronemes.components.ComponentsMapper.*;
 
 public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private static final Vector3 auxVector3_1 = new Vector3();
@@ -109,7 +110,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 
 	private boolean isVisible(final Camera camera, final Entity entity) {
 		if (!DefaultGameSettings.DISABLE_FRUSTUM_CULLING) return true;
-		ModelInstanceComponent modelInstanceComponent = ComponentsMapper.modelInstance.get(entity);
+		ModelInstanceComponent modelInstanceComponent = modelInstance.get(entity);
 		Vector3 position = modelInstanceComponent.getModelInstance().transform.getTranslation(auxVector3_1);
 		AdditionalRenderData additionalRenderData = modelInstanceComponent.getModelInstance().getAdditionalRenderData();
 		BoundingBox boundingBox = additionalRenderData.getBoundingBox(auxBoundingBox);
@@ -134,7 +135,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 							 Entity exclude,
 							 Camera camera,
 							 Entity entity) {
-		ModelInstanceComponent modelInstanceComponent = ComponentsMapper.modelInstance.get(entity);
+		ModelInstanceComponent modelInstanceComponent = modelInstance.get(entity);
 		if (shouldSkipRenderModel(renderWallsAndFloor, exclude, camera, entity, modelInstanceComponent)) {
 			return;
 		}
@@ -147,7 +148,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private boolean shouldSkipRenderModel(boolean renderWallsAndFloor, Entity exclude, Camera camera, Entity entity, ModelInstanceComponent modelInstanceComponent) {
 		return entity == exclude
 				|| (!modelInstanceComponent.isVisible())
-				|| (!renderWallsAndFloor && (ComponentsMapper.floor.has(entity)))
+				|| (!renderWallsAndFloor && (floor.has(entity)))
 				|| !isVisible(camera, entity);
 	}
 
@@ -162,11 +163,11 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		renderSkillFlowersText();
 	}
 
-	private void renderSkillFlowersText() {
+	private void renderSkillFlowersText( ) {
 		if (enemyEntities.size() > 0) {
 			spriteBatch.begin();
 			for (Entity enemy : enemyEntities) {
-				if (ComponentsMapper.simpleDecal.has(enemy)) {
+				if (simpleDecal.has(enemy)) {
 					renderSkillFlowerInsideContent(enemy);
 				}
 			}
@@ -187,7 +188,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private void renderSkillFlowerInsideContent(final Entity enemy) {
 		EnemyComponent enemyComponent = ComponentsMapper.enemy.get(enemy);
 		flipIconDisplayInFlower(enemyComponent);
-		SimpleDecalComponent simpleDecalComponent = ComponentsMapper.simpleDecal.get(enemy);
+		SimpleDecalComponent simpleDecalComponent = simpleDecal.get(enemy);
 		Camera camera = getSystemsCommonData().getCamera();
 		Vector3 screenPos = camera.project(auxVector3_1.set(simpleDecalComponent.getDecal().getPosition()));
 		if (enemyComponent.getAiStatus() == EnemyAiStatus.SEARCHING && enemyComponent.isDisplayIconInFlower()) {
@@ -221,7 +222,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		Gdx.gl.glDepthMask(true);
 	}
 
-	private void renderSimpleDecals() {
+	private void renderSimpleDecals( ) {
 		for (Entity entity : simpleDecalsEntities) {
 			renderSimpleDecal(decalBatch, entity);
 		}
@@ -229,8 +230,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	}
 
 	private void handleSimpleDecalAnimation(final Entity entity, final SimpleDecalComponent simpleDecalComponent) {
-		if (ComponentsMapper.animation.has(entity) && simpleDecalComponent.isAnimatedByAnimationComponent()) {
-			AnimationComponent animationComponent = ComponentsMapper.animation.get(entity);
+		if (animation.has(entity) && simpleDecalComponent.isAnimatedByAnimationComponent()) {
+			AnimationComponent animationComponent = animation.get(entity);
 			simpleDecalComponent.getDecal().setTextureRegion(animationComponent.calculateFrame());
 		}
 	}
@@ -243,12 +244,12 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	}
 
 	private void renderSimpleDecal(final DecalBatch decalBatch, final Entity entity) {
-		SimpleDecalComponent simpleDecalComponent = ComponentsMapper.simpleDecal.get(entity);
+		SimpleDecalComponent simpleDecalComponent = simpleDecal.get(entity);
 		if (simpleDecalComponent != null && simpleDecalComponent.isVisible()) {
-				handleSimpleDecalAnimation(entity, simpleDecalComponent);
-				faceDecalToCamera(simpleDecalComponent, simpleDecalComponent.getDecal());
-				decalBatch.add(simpleDecalComponent.getDecal());
-				renderRelatedDecals(decalBatch, simpleDecalComponent);
+			handleSimpleDecalAnimation(entity, simpleDecalComponent);
+			faceDecalToCamera(simpleDecalComponent, simpleDecalComponent.getDecal());
+			decalBatch.add(simpleDecalComponent.getDecal());
+			renderRelatedDecals(decalBatch, simpleDecalComponent);
 		}
 	}
 
@@ -272,7 +273,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	}
 
 	private void renderCharacterDecal(final Entity entity) {
-		Decal decal = ComponentsMapper.characterDecal.get(entity).getDecal();
+		Decal decal = characterDecal.get(entity).getDecal();
 		Vector3 decalPosition = decal.getPosition();
 		Camera camera = getSystemsCommonData().getCamera();
 		decal.lookAt(auxVector3_1.set(decalPosition).sub(camera.direction), camera.up);
@@ -281,11 +282,11 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 
 	private void initializeCharacterDecalForRendering(float deltaTime, Entity entity) {
 		Camera camera = getSystemsCommonData().getCamera();
-		CharacterSpriteData charSpriteData = ComponentsMapper.character.get(entity).getCharacterSpriteData();
+		CharacterSpriteData charSpriteData = character.get(entity).getCharacterSpriteData();
 		Direction direction = CharacterUtils.calculateDirectionSeenFromCamera(camera, charSpriteData.getFacingDirection());
 		SpriteType spriteType = charSpriteData.getSpriteType();
-		boolean sameSpriteType = spriteType.equals(ComponentsMapper.characterDecal.get(entity).getSpriteType());
-		if ((!sameSpriteType || !ComponentsMapper.characterDecal.get(entity).getDirection().equals(direction))) {
+		boolean sameSpriteType = spriteType.equals(characterDecal.get(entity).getSpriteType());
+		if ((!sameSpriteType || !characterDecal.get(entity).getDirection().equals(direction))) {
 			updateCharacterDecalSprite(entity, direction, spriteType, sameSpriteType);
 		} else {
 			updateCharacterDecalFrame(deltaTime, entity, charSpriteData, spriteType);
@@ -296,10 +297,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 										   Entity entity,
 										   CharacterSpriteData charSpriteData,
 										   SpriteType spriteType) {
-		CharacterDecalComponent characterDecalComponent = ComponentsMapper.characterDecal.get(entity);
+		CharacterDecalComponent characterDecalComponent = characterDecal.get(entity);
 		Decal decal = characterDecalComponent.getDecal();
-		AnimationComponent aniComp = ComponentsMapper.animation.get(entity);
-		if (ComponentsMapper.animation.has(entity) && aniComp.getAnimation() != null) {
+		AnimationComponent aniComp = animation.get(entity);
+		if (animation.has(entity) && aniComp.getAnimation() != null) {
 			AtlasRegion currentFrame = (AtlasRegion) decal.getTextureRegion();
 			AtlasRegion newFrame = calculateCharacterDecalNewFrame(delta, entity, aniComp, currentFrame);
 			if (characterDecalComponent.getSpriteType() == spriteType && currentFrame != newFrame) {
@@ -312,7 +313,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 																 CharacterSpriteData characterSpriteData,
 																 SpriteType spriteType,
 																 AtlasRegion newFrame) {
-		CharacterDecalComponent characterDecalComponent = ComponentsMapper.characterDecal.get(entity);
+		CharacterDecalComponent characterDecalComponent = characterDecal.get(entity);
 		CharacterAnimations animations = characterDecalComponent.getAnimations();
 		Decal decal = characterDecalComponent.getDecal();
 		decal.setTextureRegion(newFrame);
@@ -323,8 +324,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		if (animations.contains(spriteType)) {
 			animations.get(spriteType, facingDirection);
 		} else {
-			if (ComponentsMapper.player.has(entity)) {
-				CharacterAnimations generalAnim = ComponentsMapper.player.get(entity).getGeneralAnimations();
+			if (player.has(entity)) {
+				CharacterAnimations generalAnim = player.get(entity).getGeneralAnimations();
 				generalAnim.get(spriteType, facingDirection);
 			}
 		}
@@ -347,9 +348,9 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 											Direction direction,
 											SpriteType spriteType,
 											boolean sameSpriteType) {
-		AnimationComponent animationComponent = ComponentsMapper.animation.get(entity);
-		ComponentsMapper.characterDecal.get(entity).initializeSprite(spriteType, direction);
-		if (ComponentsMapper.animation.has(entity)) {
+		AnimationComponent animationComponent = animation.get(entity);
+		characterDecal.get(entity).initializeSprite(spriteType, direction);
+		if (animation.has(entity)) {
 			if (spriteType.isSingleAnimation()) {
 				if (!animationComponent.getAnimation().isAnimationFinished(animationComponent.getStateTime())) {
 					direction = Direction.SOUTH;
@@ -363,19 +364,18 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 														  Direction direction,
 														  SpriteType spriteType,
 														  boolean sameSpriteType) {
-		CharacterAnimation animation;
-		AnimationComponent animationComponent = ComponentsMapper.animation.get(entity);
-		CharacterAnimations animations = ComponentsMapper.characterDecal.get(entity).getAnimations();
-		float animationDuration = spriteType.getAnimationDuration();
-		if (animations.contains(spriteType)) {
-			animation = animations.get(spriteType, direction);
-			animationComponent.init(animationDuration, animation);
-		} else if (ComponentsMapper.player.has(entity)) {
-			animation = ComponentsMapper.player.get(entity).getGeneralAnimations().get(spriteType, direction);
-			animationComponent.init(animationDuration, animation);
+		AnimationComponent animationComponent = animation.get(entity);
+		CharacterAnimation animation = null;
+		if (characterDecal.get(entity).getAnimations().contains(spriteType)) {
+			animation = characterDecal.get(entity).getAnimations().get(spriteType, direction);
+		} else if (player.has(entity)) {
+			animation = player.get(entity).getGeneralAnimations().get(spriteType, direction);
 		}
-		if (!sameSpriteType) {
-			animationComponent.resetStateTime();
+		if (animation != null) {
+			animationComponent.init(spriteType.getAnimationDuration(), animation);
+			if (!sameSpriteType) {
+				animationComponent.resetStateTime();
+			}
 		}
 	}
 

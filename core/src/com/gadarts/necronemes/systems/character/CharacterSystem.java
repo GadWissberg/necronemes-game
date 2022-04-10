@@ -34,6 +34,7 @@ import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.enemy.EnemySystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.projectiles.ProjectilesSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
 
 import java.util.Map;
@@ -47,7 +48,8 @@ import static com.gadarts.necronemes.utils.GeneralUtils.EPSILON;
 public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber> implements
 		PlayerSystemEventsSubscriber,
 		RenderSystemEventsSubscriber,
-		EnemySystemEventsSubscriber {
+		EnemySystemEventsSubscriber,
+		ProjectilesSystemEventsSubscriber {
 	private static final int ROT_INTERVAL = 125;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector2 auxVector2_1 = new Vector2();
@@ -407,7 +409,12 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		Strength strength = character.get(attacker).getSkills().getStrength();
 		applyDamageToCharacter(attacked, MathUtils.random(strength.getMinDamage(), strength.getMaxDamage()));
 	}
-
+	@Override
+	public void onProjectileCollisionWithAnotherEntity(final Entity bullet, final Entity collidable) {
+		if (ComponentsMapper.character.has(collidable)) {
+			applyDamageToCharacter(collidable, ComponentsMapper.bullet.get(bullet).getDamage());
+		}
+	}
 	@Override
 	public void onFrameChanged(final Entity character, final float deltaTime, final TextureAtlas.AtlasRegion newFrame) {
 		CharacterComponent characterComponent = ComponentsMapper.character.get(character);

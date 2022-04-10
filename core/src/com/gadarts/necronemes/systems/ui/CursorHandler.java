@@ -94,5 +94,8 @@ public class CursorHandler implements Disposable {
 		int row = newNode.getRow();
 		getCursorModelInstance().transform.setTranslation(col + 0.5f, newNode.getHeight(), row + 0.5f);
 		colorizeCursor();
+		if (cursorCellPositionLabel != null) {
+			cursorCellPositionLabel.setText(String.format(POSITION_LABEL_FORMAT, row, col));
+		}
 	}
 }

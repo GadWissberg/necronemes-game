@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Pools;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -16,10 +17,7 @@ import com.gadarts.necromine.model.characters.enemies.Enemies;
 import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
-import com.gadarts.necronemes.components.FloorComponent;
-import com.gadarts.necronemes.components.FlowerSkillIconComponent;
-import com.gadarts.necronemes.components.PickUpComponent;
-import com.gadarts.necronemes.components.WallComponent;
+import com.gadarts.necronemes.components.*;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
@@ -31,14 +29,18 @@ import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
+import com.gadarts.necronemes.map.MapGraphNode;
 import lombok.AccessLevel;
 import lombok.Setter;
+
+import java.util.Optional;
 
 import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_SCALE;
 
 public class EntityBuilder {
 	public static final String MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST = "Call beginBuildingEntity() first!";
 	private static final EntityBuilder instance = new EntityBuilder();
+	private static final Vector2 auxVector2 = new Vector2();
 	@Setter(AccessLevel.PRIVATE)
 	private PooledEngine engine;
 	private Entity currentEntity;
@@ -48,11 +50,31 @@ public class EntityBuilder {
 		return instance;
 	}
 
+	public EntityBuilder addBulletComponent(final Vector3 initialPosition,
+											final Vector3 direction,
+											final Entity owner,
+											final Integer damagePoints) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		BulletComponent bulletComponent = engine.createComponent(BulletComponent.class);
+		bulletComponent.init(auxVector2.set(initialPosition.x, initialPosition.z), direction, owner, damagePoints);
+		currentEntity.add(bulletComponent);
+		return instance;
+	}
+
 	public EntityBuilder addFlowerSkillIconComponent( ) {
 		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
 		FlowerSkillIconComponent component = engine.createComponent(FlowerSkillIconComponent.class);
 		component.init(TimeUtils.millis());
 		currentEntity.add(component);
+		return instance;
+	}
+
+	public EntityBuilder addAnimationComponent(final float frameDuration,
+											   final Animation<TextureAtlas.AtlasRegion> animation) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		AnimationComponent animComponent = engine.createComponent(AnimationComponent.class);
+		currentEntity.add(animComponent);
+		Optional.ofNullable(animation).ifPresent(a -> animComponent.init(frameDuration, animation));
 		return instance;
 	}
 
