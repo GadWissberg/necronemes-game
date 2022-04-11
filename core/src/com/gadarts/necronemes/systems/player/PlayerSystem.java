@@ -11,13 +11,15 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
-import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
+import com.gadarts.necronemes.components.character.CharacterAnimation;
+import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterComponent;
+import com.gadarts.necronemes.components.character.CharacterSpriteData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.components.player.PlayerComponent;
@@ -33,8 +35,7 @@ import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
 
 import java.util.List;
 
-import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
-import static com.gadarts.necronemes.components.ComponentsMapper.player;
+import static com.gadarts.necronemes.components.ComponentsMapper.*;
 import static com.gadarts.necronemes.map.MapGraphConnectionCosts.CLEAN;
 import static com.gadarts.necronemes.systems.character.CharacterCommands.*;
 import static com.gadarts.necronemes.utils.GeneralUtils.calculatePath;
@@ -55,17 +56,15 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	@Override
 	public void onSelectedWeaponChanged(Weapon selectedWeapon) {
 		WeaponsDefinitions definition = (WeaponsDefinitions) selectedWeapon.getDefinition();
-		CharacterDecalComponent cdc = ComponentsMapper.characterDecal.get(player);
-		CharacterAnimations animations = services.getAssetManager().get(Assets.Atlases.findByRelatedWeapon(definition).name());
-		Direction direction = cdc.getDirection();
-		cdc.init(animations, cdc.getSpriteType(), direction, auxVector3.set(cdc.getDecal().getPosition()));
-		CharacterAnimation animation = animations.get(cdc.getSpriteType(), direction);
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		Entity player = systemsCommonData.getPlayer();
+		CharacterDecalComponent cdc = characterDecal.get(player);
+		CharacterAnimations animations = getAssetsManager().get(Assets.Atlases.findByRelatedWeapon(definition).name());
+		cdc.init(animations, cdc.getSpriteType(), cdc.getDirection(), auxVector3.set(cdc.getDecal().getPosition()));
+		CharacterAnimation animation = animations.get(cdc.getSpriteType(), cdc.getDirection());
 		ComponentsMapper.animation.get(player).init(cdc.getSpriteType().getAnimationDuration(), animation);
-	}
-
-	private void setSelectedWeapon(final Weapon selectedWeapon) {
-		if (selectedWeapon != getSystemsCommonData().getStorage().getSelectedWeapon()) {
-			getSystemsCommonData().getStorage().setSelectedWeapon(selectedWeapon);
+		if (selectedWeapon != systemsCommonData.getStorage().getSelectedWeapon()) {
+			systemsCommonData.getStorage().setSelectedWeapon(selectedWeapon);
 		}
 	}
 
@@ -80,7 +79,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 
 	@Override
 	public void onItemPickedUp(final Entity itemPickedUp) {
-		Item item = ComponentsMapper.pickup.get(itemPickedUp).getItem();
+		Item item = pickup.get(itemPickedUp).getItem();
 		if (getSystemsCommonData().getStorage().addItem(item)) {
 			for (PlayerSystemEventsSubscriber subscriber : subscribers) {
 				subscriber.onItemAddedToStorage(item);
@@ -136,15 +135,19 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 
 	private void enemySelectedWithRangeWeapon(final MapGraphNode node) {
 		Entity player = getSystemsCommonData().getPlayer();
-		CharacterComponent characterComponent = ComponentsMapper.character.get(player);
-		Weapon selectedWeapon = getSystemsCommonData().getStorage().getSelectedWeapon();
-		WeaponsDefinitions definition = (WeaponsDefinitions) selectedWeapon.getDefinition();
-		characterComponent.getCharacterSpriteData().setMeleeHitFrameIndex(definition.getHitFrameIndex());
-		characterComponent.setTarget(getSystemsCommonData().getMap().getAliveEnemyFromNode(node));
+		CharacterComponent charComp = character.get(player);
+		Weapon w = getSystemsCommonData().getStorage().getSelectedWeapon();
+		CharacterSpriteData characterSpriteData = charComp.getCharacterSpriteData();
+		characterSpriteData.setMeleeHitFrameIndex(((WeaponsDefinitions) w.getDefinition()).getHitFrameIndex());
+		Entity targetNode = getSystemsCommonData().getMap().getAliveEnemyFromNode(node);
+		charComp.setTarget(targetNode);
+		for (PlayerSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.onPlayerAppliedCommand(auxCommand.init(ATTACK_PRIMARY, null, player, targetNode));
+		}
 	}
 
 	private void activateAttackMode(final Entity enemyAtNode, final List<MapGraphNode> availableNodes) {
-		ComponentsMapper.character.get(getSystemsCommonData().getPlayer()).setTarget(enemyAtNode);
+		character.get(getSystemsCommonData().getPlayer()).setTarget(enemyAtNode);
 		for (PlayerSystemEventsSubscriber subscriber : subscribers) {
 			subscriber.onAttackModeActivated(availableNodes);
 		}
@@ -158,7 +161,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 			subscriber.onPlayerPathCreated();
 		}
 		Entity player = getSystemsCommonData().getPlayer();
-		playerPathPlanner.displayPathPlan(ComponentsMapper.character.get(player).getSkills().getAgility());
+		playerPathPlanner.displayPathPlan(character.get(player).getSkills().getAgility());
 	}
 
 	public boolean calculatePathToCharacter(MapGraphNode sourceNode,
@@ -185,7 +188,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	private boolean calculatePathAccordingToSelection(final MapGraphNode cursorNode, Entity enemyAtNode) {
-		CharacterDecalComponent charDecalComp = ComponentsMapper.characterDecal.get(getSystemsCommonData().getPlayer());
+		CharacterDecalComponent charDecalComp = characterDecal.get(getSystemsCommonData().getPlayer());
 		MapGraphPath plannedPath = playerPathPlanner.getCurrentPath();
 		initializePathPlanRequest(cursorNode, charDecalComp, plannedPath);
 		Vector2 cellPosition = charDecalComp.getNodePosition(auxVector2_1);
@@ -196,7 +199,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 
 	private boolean calculatePathToEnemy(Entity enemyAtNode, MapGraphNode playerNode) {
 		return enemyAtNode != null
-				&& ComponentsMapper.character.get(enemyAtNode).getSkills().getHealthData().getHp() > 0
+				&& character.get(enemyAtNode).getSkills().getHealthData().getHp() > 0
 				&& calculatePathToCharacter(playerNode, enemyAtNode, true, CLEAN);
 	}
 
@@ -213,7 +216,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	private void applyPlayerCommandAccordingToPlan(MapGraphNode cursorNode, AttackNodesHandler attackNodesHandler) {
 		playerPathPlanner.hideAllArrows();
 		SystemsCommonData commonData = getSystemsCommonData();
-		CharacterDecalComponent charDecalComp = ComponentsMapper.characterDecal.get(commonData.getPlayer());
+		CharacterDecalComponent charDecalComp = characterDecal.get(commonData.getPlayer());
 		MapGraphNode playerNode = commonData.getMap().getNode(charDecalComp.getNodePosition(auxVector2_1));
 		if (attackNodesHandler.getSelectedAttackNode() == null) {
 			applyCommandWhenNoAttackNodeSelected(commonData, playerNode);
@@ -285,14 +288,14 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	private void applyPlayerCommand(CharacterCommands CommandDefinition, Object additionalData) {
 		Entity player = getSystemsCommonData().getPlayer();
 		auxCommand.init(CommandDefinition, playerPathPlanner.getCurrentPath(), player, additionalData);
-		subscribers.forEach(sub -> sub.onPlayerAppliedCommand(auxCommand, player));
+		subscribers.forEach(sub -> sub.onPlayerAppliedCommand(auxCommand));
 	}
 
 	private void applyGoToCommand(final MapGraphPath path) {
 		SystemsCommonData systemsCommonData = getSystemsCommonData();
 		MapGraph map = systemsCommonData.getMap();
 		Entity player = systemsCommonData.getPlayer();
-		MapGraphNode playerNode = map.getNode(ComponentsMapper.characterDecal.get(player).getDecal().getPosition());
+		MapGraphNode playerNode = map.getNode(characterDecal.get(player).getDecal().getPosition());
 		if (path.getCount() > 0 && !playerNode.equals(path.get(path.getCount() - 1))) {
 			applyPlayerCommand(GO_TO);
 		}

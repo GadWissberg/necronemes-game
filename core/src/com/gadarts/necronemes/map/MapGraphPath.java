@@ -16,6 +16,8 @@ public class MapGraphPath extends DefaultGraphPath<MapGraphNode> {
 
 	public void set(MapGraphPath path) {
 		nodes.clear();
-		nodes.addAll(path.nodes);
+		if (path != null) {
+			nodes.addAll(path.nodes);
+		}
 	}
 }

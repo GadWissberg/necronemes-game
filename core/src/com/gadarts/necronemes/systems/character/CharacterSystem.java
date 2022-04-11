@@ -24,8 +24,6 @@ import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
-import com.gadarts.necronemes.components.player.PlayerComponent;
-import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphConnection;
 import com.gadarts.necronemes.map.MapGraphNode;
@@ -34,7 +32,7 @@ import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.enemy.EnemySystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
-import com.gadarts.necronemes.systems.projectiles.ProjectilesSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.projectiles.BulletSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
 
 import java.util.Map;
@@ -49,7 +47,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		PlayerSystemEventsSubscriber,
 		RenderSystemEventsSubscriber,
 		EnemySystemEventsSubscriber,
-		ProjectilesSystemEventsSubscriber {
+		BulletSystemEventsSubscriber {
 	private static final int ROT_INTERVAL = 125;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector2 auxVector2_1 = new Vector2();
@@ -383,8 +381,15 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	}
 
 	@Override
-	public void onPlayerAppliedCommand(CharacterCommand command, Entity player) {
-		onCharacterAppliedCommand(command, player);
+	public void onPlayerAppliedCommand(CharacterCommand command) {
+		onCharacterAppliedCommand(command, getSystemsCommonData().getPlayer());
+	}
+
+	@Override
+	public void onHitScanCollisionWithAnotherEntity(WeaponsDefinitions definition, Entity collidable) {
+		if (ComponentsMapper.character.has(collidable)) {
+			applyDamageToCharacter(collidable, definition.getDamage());
+		}
 	}
 
 	private void onCharacterAppliedCommand(CharacterCommand command, Entity character) {
@@ -409,12 +414,14 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		Strength strength = character.get(attacker).getSkills().getStrength();
 		applyDamageToCharacter(attacked, MathUtils.random(strength.getMinDamage(), strength.getMaxDamage()));
 	}
+
 	@Override
 	public void onProjectileCollisionWithAnotherEntity(final Entity bullet, final Entity collidable) {
 		if (ComponentsMapper.character.has(collidable)) {
 			applyDamageToCharacter(collidable, ComponentsMapper.bullet.get(bullet).getDamage());
 		}
 	}
+
 	@Override
 	public void onFrameChanged(final Entity character, final float deltaTime, final TextureAtlas.AtlasRegion newFrame) {
 		CharacterComponent characterComponent = ComponentsMapper.character.get(character);

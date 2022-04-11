@@ -49,7 +49,7 @@ public class PickupSystem extends GameSystem<SystemEventsSubscriber> implements 
 	}
 
 	@Override
-	public void onPlayerAppliedCommand(CharacterCommand command, Entity player) {
+	public void onPlayerAppliedCommand(CharacterCommand command) {
 
 	}
 
