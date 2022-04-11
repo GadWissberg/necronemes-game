@@ -21,6 +21,7 @@ import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
+import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.GameSystem;
@@ -62,6 +63,11 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		Table hudTable = addTable();
 		hudTable.setName(TABLE_NAME_HUD);
 		addStorageButton(hudTable);
+	}
+
+	@Override
+	public void onItemAddedToStorage(Item item) {
+		getSystemsCommonData().getUiStage().onItemAddedToStorage(item);
 	}
 
 	@Override

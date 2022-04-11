@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
@@ -52,8 +53,14 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void onUserAppliedSelectionToSelectedWeapon(Weapon weapon) {
-		setSelectedWeapon(weapon);
+	public void onSelectedWeaponChanged(Weapon selectedWeapon) {
+		WeaponsDefinitions definition = (WeaponsDefinitions) selectedWeapon.getDefinition();
+		CharacterDecalComponent cdc = ComponentsMapper.characterDecal.get(player);
+		CharacterAnimations animations = services.getAssetManager().get(Assets.Atlases.findByRelatedWeapon(definition).name());
+		Direction direction = cdc.getDirection();
+		cdc.init(animations, cdc.getSpriteType(), direction, auxVector3.set(cdc.getDecal().getPosition()));
+		CharacterAnimation animation = animations.get(cdc.getSpriteType(), direction);
+		ComponentsMapper.animation.get(player).init(cdc.getSpriteType().getAnimationDuration(), animation);
 	}
 
 	private void setSelectedWeapon(final Weapon selectedWeapon) {
@@ -78,7 +85,6 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 			for (PlayerSystemEventsSubscriber subscriber : subscribers) {
 				subscriber.onItemAddedToStorage(item);
 			}
-			getSystemsCommonData().getUiStage().onItemAddedToStorage(item);
 		}
 		getSoundPlayer().playSound(Assets.Sounds.PICKUP);
 	}

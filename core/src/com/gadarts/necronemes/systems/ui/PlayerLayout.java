@@ -106,7 +106,7 @@ public class PlayerLayout extends ItemsTable {
 										List<UserInterfaceSystemEventsSubscriber> subscribers) {
 		itemsTableToRemoveFrom.removeItem(selection);
 		PlayerLayout.this.weaponChoice = selection;
-		subscribers.forEach(sub -> sub.onUserAppliedSelectionToSelectedWeapon((Weapon) weaponChoice.getItem()));
+		subscribers.forEach(sub -> sub.onSelectedWeaponChanged((Weapon) weaponChoice.getItem()));
 		selection.setLocatedIn(PlayerLayout.class);
 		placeWeapon();
 	}

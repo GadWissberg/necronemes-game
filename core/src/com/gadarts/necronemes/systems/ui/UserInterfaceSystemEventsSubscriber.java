@@ -19,7 +19,4 @@ public interface UserInterfaceSystemEventsSubscriber extends SystemEventsSubscri
 
 	}
 
-	default void onUserAppliedSelectionToSelectedWeapon(Weapon weapon){
-		
-	}
 }

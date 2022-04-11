@@ -17,6 +17,7 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class GameStage extends Stage {
 	private final SoundPlayer soundPlayer;
@@ -39,7 +40,7 @@ public class GameStage extends Stage {
 		});
 	}
 
-	public boolean hasOpenWindows() {
+	public boolean hasOpenWindows( ) {
 		boolean result = false;
 		for (GameWindow window : windows) {
 			if (window.isVisible()) {
@@ -98,6 +99,6 @@ public class GameStage extends Stage {
 
 	public void onItemAddedToStorage(Item item) {
 		StorageWindow window = (StorageWindow) getWindowByName(StorageWindow.NAME);
-		window.onItemAddedToStorage(item);
+		Optional.ofNullable(window).ifPresent(w -> w.onItemAddedToStorage(item));
 	}
 }
