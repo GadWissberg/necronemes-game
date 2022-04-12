@@ -12,9 +12,12 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.graphics.g3d.decals.DecalBatch;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -65,6 +68,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private final StringBuilder stringBuilder = new StringBuilder();
 	private final GlyphLayout skillFlowerGlyph;
 	private final BitmapFont skillFlowerFont;
+	private final Environment environment;
+	private final MainShaderProvider shaderProvider;
 	private DecalBatch decalBatch;
 	private ImmutableArray<Entity> modelInstanceEntities;
 	private ImmutableArray<Entity> characterDecalsEntities;
@@ -73,11 +78,22 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 
 	public RenderSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
 		super(systemsCommonData, soundPlayer, assetsManager);
-		this.modelBatch = new ModelBatch();
+		shaderProvider = new MainShaderProvider(getAssetsManager(), getSystemsCommonData().getMap());
+		this.modelBatch = new ModelBatch(shaderProvider);
 		this.spriteBatch = new SpriteBatch();
 		iconFlowerLookingFor = assetsManager.getTexture(Assets.UiTextures.ICON_LOOKING_FOR);
 		skillFlowerFont = new BitmapFont();
 		skillFlowerGlyph = new GlyphLayout();
+		environment = createEnvironment();
+	}
+
+	private Environment createEnvironment() {
+		final Environment environment;
+		environment = new Environment();
+		float ambient = getSystemsCommonData().getMap().getAmbient()-1F;
+		environment.set(new ColorAttribute(ColorAttribute.AmbientLight, ambient, ambient, ambient, 0.1f));
+		environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1F, -1F, -0.5F));
+		return environment;
 	}
 
 	@Override
@@ -145,7 +161,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 			return;
 		}
 		GameModelInstance modelInstance = modelInstanceComponent.getModelInstance();
-		modelBatch.render(modelInstance);
+		modelBatch.render(modelInstance, environment);
 		SystemsCommonData systemsCommonData = getSystemsCommonData();
 		systemsCommonData.setNumberOfVisible(systemsCommonData.getNumberOfVisible() + 1);
 	}
@@ -171,7 +187,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 
 	private void renderParticleEffects() {
 		modelBatch.begin(getSystemsCommonData().getCamera());
-		modelBatch.render(getSystemsCommonData().getParticleSystem());
+		modelBatch.render(getSystemsCommonData().getParticleSystem(), environment);
 		modelBatch.end();
 	}
 
@@ -289,6 +305,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		Vector3 decalPosition = decal.getPosition();
 		Camera camera = getSystemsCommonData().getCamera();
 		decal.lookAt(auxVector3_1.set(decalPosition).sub(camera.direction), camera.up);
+		float ambient = getSystemsCommonData().getMap().getAmbient();
+		decal.setColor(ambient, ambient, ambient, 1F);
 		decalBatch.add(decal);
 	}
 

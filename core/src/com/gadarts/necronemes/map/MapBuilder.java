@@ -52,6 +52,7 @@ import com.gadarts.necronemes.components.sd.RelatedDecal;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
 import com.gadarts.necronemes.systems.enemy.EnemySystem;
 import com.gadarts.necronemes.utils.EntityBuilder;
+import com.gadarts.necronemes.utils.GeneralUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -114,7 +115,7 @@ public class MapBuilder implements Disposable {
 	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private static final String KEY_PICKUPS = "pickups";
 	private static final String REGION_NAME_BULLET = "bullet";
-	private final static Matrix4 auxMatrix = new Matrix4();
+	private static final Matrix4 auxMatrix = new Matrix4();
 	private final Model floorModel;
 	private final PooledEngine engine;
 	private final GameAssetsManager assetsManager;
@@ -522,7 +523,9 @@ public class MapBuilder implements Disposable {
 	}
 
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
-		MapGraph mapGraph = new MapGraph(inflateNodes(mapJsonObj.get(TILES).getAsJsonObject()), engine);
+		Dimension mapSize = inflateNodes(mapJsonObj.get(TILES).getAsJsonObject());
+		float ambient = GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, MapJsonKeys.AMBIENT, 0);
+		MapGraph mapGraph = new MapGraph(mapSize, engine, ambient);
 		return mapGraph;
 	}
 

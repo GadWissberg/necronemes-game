@@ -20,10 +20,6 @@ public class GameModelInstance extends ModelInstance {
 		this.additionalRenderData = new AdditionalRenderData(affectedByLight, boundingBox, colorWhenOutside);
 	}
 
-	public GameModelInstance(final Model model, final BoundingBox boundingBox, final Assets.Models modelDefinition) {
-		this(model, boundingBox, true, modelDefinition);
-	}
-
 	public GameModelInstance(final Model model, final BoundingBox boundingBox) {
 		this(model, boundingBox, true, null);
 	}

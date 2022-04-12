@@ -35,6 +35,8 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private final static Vector2 auxVector2 = new Vector2();
 	private static final List<MapGraphNode> auxNodesList_1 = new ArrayList<>();
 	private static final List<MapGraphNode> auxNodesList_2 = new ArrayList<>();
+	@Getter
+	private final float ambient;
 	private final Dimension mapSize;
 	@Getter
 	private final Array<MapGraphNode> nodes;
@@ -49,7 +51,8 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	@Setter
 	private boolean includeEnemiesInGetConnections = true;
 
-	public MapGraph(Dimension mapSize, PooledEngine engine) {
+	public MapGraph(Dimension mapSize, PooledEngine engine, float ambient) {
+		this.ambient = ambient;
 		this.characterEntities = engine.getEntitiesFor(Family.all(CharacterComponent.class).get());
 		this.enemiesEntities = engine.getEntitiesFor(Family.all(EnemyComponent.class).get());
 		this.mapSize = mapSize;
