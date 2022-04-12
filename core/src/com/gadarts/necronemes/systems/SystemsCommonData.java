@@ -2,6 +2,7 @@ package com.gadarts.necronemes.systems;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.g3d.particles.ParticleSystem;
 import com.gadarts.necronemes.systems.player.PlayerStorage;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.systems.character.CharacterCommand;
@@ -18,6 +19,7 @@ public class SystemsCommonData {
 	private final String versionName;
 	private final int versionNumber;
 	private final PlayerStorage storage = new PlayerStorage();
+	private ParticleSystem particleSystem;
 	private Entity cursor;
 	private Camera camera;
 	private MapGraph map;

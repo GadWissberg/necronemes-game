@@ -8,6 +8,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import com.badlogic.gdx.graphics.g3d.particles.ParticleEffect;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
 import com.gadarts.necromine.assets.Assets;
@@ -33,20 +34,21 @@ import static com.badlogic.gdx.math.Vector3.Zero;
 import static com.gadarts.necronemes.components.ComponentsMapper.*;
 
 public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> implements CharacterSystemEventsSubscriber {
-	private final static float BULLET_SPEED = 0.2f;
+	private static final float BULLET_SPEED = 0.2f;
 	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final Vector2 auxVector2_2 = new Vector2();
 	private static final Vector2 auxVector2_3 = new Vector2();
 	private static final Vector2 auxVector2_4 = new Vector2();
 	private static final Vector2 auxVector2_5 = new Vector2();
 	private static final Vector2 auxVector2_6 = new Vector2();
-	private final static float BULLET_MAX_DISTANCE = 14;
+	private static final float BULLET_MAX_DISTANCE = 14;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
 	private static final Vector3 auxVector3_3 = new Vector3();
 	private static final Vector3 auxVector3_4 = new Vector3();
-	private final static Bresenham2 bresenham = new Bresenham2();
-	private final static float HIT_SCAN_MAX_DISTANCE = 10F;
+	private static final Bresenham2 bresenham = new Bresenham2();
+	private static final float HIT_SCAN_MAX_DISTANCE = 10F;
+	private ParticleEffect bulletRicochetEffect;
 	private ImmutableArray<Entity> bullets;
 	private ImmutableArray<Entity> collidables;
 
@@ -128,10 +130,12 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 											 final Vector3 maxRangePos) {
 		MapGraphNode node = map.getNode(n.x, n.y);
 		if (node.getHeight() > map.getNode((int) posNodeCenterPos.x, (int) posNodeCenterPos.z).getHeight() + 1) {
-			Vector2 intersectionPosition = findNodeSegmentIntersection(posNodeCenterPos, maxRangePos, n);
-			if (!intersectionPosition.equals(Vector2.Zero)) {
-				auxVector3_1.set(intersectionPosition.x, posNodeCenterPos.y + 1F, intersectionPosition.y);
+			Vector2 intersectionPos = findNodeSegmentIntersection(posNodeCenterPos, maxRangePos, n);
+			if (!intersectionPos.equals(Vector2.Zero)) {
+				auxVector3_1.set(intersectionPos.x, posNodeCenterPos.y + 1F, intersectionPos.y);
+				Vector3 position = auxVector3_1.set(intersectionPos.x, posNodeCenterPos.y + 1F, intersectionPos.y);
 				EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
+						.addParticleEffectComponent((PooledEngine) getEngine(), bulletRicochetEffect, position)
 						.finishAndAddToEngine();
 				return true;
 			} else {
@@ -141,7 +145,9 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 		Entity enemy = map.getAliveEnemyFromNode(node);
 		if (enemy != null) {
 			onHitScanCollisionWithAnotherEntity((WeaponsDefinitions) selectedWeapon.getDefinition(), enemy);
+			Vector3 position = auxVector3_1.set(ComponentsMapper.characterDecal.get(enemy).getDecal().getPosition());
 			EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
+					.addParticleEffectComponent((PooledEngine) getEngine(), bulletRicochetEffect, position)
 					.finishAndAddToEngine();
 			return true;
 		}
@@ -189,10 +195,14 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 								   final Animation<TextureAtlas.AtlasRegion> bulletAnim) {
 		charPos.y += enemy.get(character).getEnemyDefinition().getHeight() / 2F;
 		Integer[] damagePoints = enemyComp.getEnemyDefinition().getPrimaryAttack().getDamagePoints();
-		EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
+		ParticleEffect effect = getAssetsManager().getParticleEffect(Assets.ParticleEffects.ENERGY_BALL_TRAIL);
+		Entity bullet = EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
 				.addBulletComponent(charPos, direction, character, damagePoints[enemyComp.getSkill() - 1])
 				.addAnimationComponent(enemyComp.getEnemyDefinition().getPrimaryAttack().getFrameDuration(), bulletAnim)
 				.addSimpleDecalComponent(charPos, bulletAnim.getKeyFrames()[0], Zero.setZero(), true, true)
+				.finishAndAddToEngine();
+		EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
+				.addParticleEffectComponent((PooledEngine) getEngine(), effect, auxVector3_1.set(charPos), bullet)
 				.finishAndAddToEngine();
 	}
 
@@ -223,6 +233,16 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 	private void destroyBullet(final Entity bullet) {
 		bullet.remove(BulletComponent.class);
 		getEngine().removeEntity(bullet);
+		ParticleEffect effect = getAssetsManager().getParticleEffect(Assets.ParticleEffects.ENERGY_BALL_EXPLOSION);
+		Vector3 pos = auxVector3_1.set(ComponentsMapper.simpleDecal.get(bullet).getDecal().getPosition());
+		createExplosion(effect, pos);
+	}
+
+	private void createExplosion(final ParticleEffect effect, final Vector3 pos) {
+		EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
+				.addParticleEffectComponent((PooledEngine) getEngine(), effect, pos)
+				.finishAndAddToEngine();
+		getSoundPlayer().playSound(Assets.Sounds.SMALL_EXP);
 	}
 
 	private boolean checkCollisionWithCharacter(final Decal decal, final Entity collidable) {
@@ -295,7 +315,7 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 
 	@Override
 	public void initializeData( ) {
-
+		bulletRicochetEffect = getAssetsManager().getParticleEffect(Assets.ParticleEffects.BULLET_RICOCHET);
 	}
 
 	@Override

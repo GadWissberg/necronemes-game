@@ -3,15 +3,18 @@ package com.gadarts.necronemes.systems.character;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import com.badlogic.gdx.graphics.g3d.particles.ParticleEffect;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.characters.CharacterTypes;
 import com.gadarts.necromine.model.characters.Direction;
@@ -24,6 +27,7 @@ import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
+import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphConnection;
 import com.gadarts.necronemes.map.MapGraphNode;
@@ -34,6 +38,7 @@ import com.gadarts.necronemes.systems.enemy.EnemySystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.projectiles.BulletSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
+import com.gadarts.necronemes.utils.EntityBuilder;
 
 import java.util.Map;
 
@@ -65,6 +70,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 			ATTACK, this::applyMeleeAttack,
 			ATTACK_PRIMARY, this::applyPrimaryAttack
 	);
+	private ParticleEffect bloodSplatterEffect;
 	private ImmutableArray<Entity> characters;
 
 	public CharacterSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
@@ -84,7 +90,7 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 
 	@Override
 	public void initializeData( ) {
-
+		bloodSplatterEffect = getAssetsManager().getParticleEffect(Assets.ParticleEffects.BLOOD_SPLATTER);
 	}
 
 	/**
@@ -183,6 +189,25 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 		CharacterComponent characterComponent = character.get(attacked);
 		characterComponent.dealDamage(damage);
 		handleDeath(attacked);
+		Vector3 pos = ComponentsMapper.characterDecal.get(attacked).getNodePosition(auxVector3_1);
+		float height = calculateSplatterEffectHeight(attacked, pos);
+		addSplatterEffect(auxVector3_1.set(pos.x + 0.5F, height, pos.z + 0.5F));
+	}
+
+	private void addSplatterEffect(final Vector3 pos) {
+		EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
+				.addParticleEffectComponent((PooledEngine) getEngine(), bloodSplatterEffect, pos)
+				.finishAndAddToEngine();
+	}
+
+	private float calculateSplatterEffectHeight(final Entity attacked, final Vector3 pos) {
+		float height = pos.y;
+		if (ComponentsMapper.enemy.has(attacked)) {
+			height += ComponentsMapper.enemy.get(attacked).getEnemyDefinition().getHeight() / 2F;
+		} else if (ComponentsMapper.player.has(attacked)) {
+			height += PlayerComponent.PLAYER_HEIGHT;
+		}
+		return height;
 	}
 
 	private void handleDeath(final Entity character) {

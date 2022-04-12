@@ -15,7 +15,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.graphics.g3d.decals.DecalBatch;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -45,7 +44,13 @@ import com.gadarts.necronemes.systems.enemy.EnemyAiStatus;
 import java.util.List;
 
 import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
-import static com.gadarts.necronemes.components.ComponentsMapper.*;
+import static com.gadarts.necronemes.components.ComponentsMapper.animation;
+import static com.gadarts.necronemes.components.ComponentsMapper.character;
+import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
+import static com.gadarts.necronemes.components.ComponentsMapper.floor;
+import static com.gadarts.necronemes.components.ComponentsMapper.modelInstance;
+import static com.gadarts.necronemes.components.ComponentsMapper.player;
+import static com.gadarts.necronemes.components.ComponentsMapper.simpleDecal;
 
 public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	private static final Vector3 auxVector3_1 = new Vector3();
@@ -159,11 +164,18 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		resetDisplay(Color.BLACK);
 		renderModels(modelBatch, true);
 		renderDecals(deltaTime);
+		renderParticleEffects();
 		getSystemsCommonData().getUiStage().draw();
 		renderSkillFlowersText();
 	}
 
-	private void renderSkillFlowersText( ) {
+	private void renderParticleEffects() {
+		modelBatch.begin(getSystemsCommonData().getCamera());
+		modelBatch.render(getSystemsCommonData().getParticleSystem());
+		modelBatch.end();
+	}
+
+	private void renderSkillFlowersText() {
 		if (enemyEntities.size() > 0) {
 			spriteBatch.begin();
 			for (Entity enemy : enemyEntities) {

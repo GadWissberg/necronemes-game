@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
+import com.badlogic.gdx.graphics.g3d.particles.ParticleEffect;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Pools;
@@ -221,6 +222,34 @@ public class EntityBuilder {
 		CharacterDecalComponent characterDecalComponent = engine.createComponent(CharacterDecalComponent.class);
 		characterDecalComponent.init(animations, spriteType, direction, position);
 		currentEntity.add(characterDecalComponent);
+		return instance;
+	}
+
+	public EntityBuilder addParticleEffectComponent(final PooledEngine engine,
+													final ParticleEffect originalEffect,
+													final Vector3 position) {
+		return addParticleEffectComponent(engine, originalEffect, position, null);
+	}
+
+	public EntityBuilder addParticleEffectComponent(final PooledEngine engine,
+													final ParticleEffect originalEffect,
+													final Vector3 position,
+													final Entity parent) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		ParticleEffect effect = originalEffect.copy();
+		ParticleComponent particleComponent = engine.createComponent(ParticleComponent.class);
+		if (parent != null) {
+			ParticleEffectParentComponent particleComponentParent;
+			if (!ComponentsMapper.particleParent.has(parent)) {
+				particleComponentParent = engine.createComponent(ParticleEffectParentComponent.class);
+			} else {
+				particleComponentParent = ComponentsMapper.particleParent.get(parent);
+			}
+			particleComponentParent.getChildren().add(currentEntity);
+		}
+		particleComponent.init(effect, parent);
+		effect.translate(position);
+		currentEntity.add(particleComponent);
 		return instance;
 	}
 

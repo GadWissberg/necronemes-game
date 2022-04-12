@@ -23,6 +23,7 @@ public enum Systems {
 	TURNS(TurnsSystem.class),
 	ENEMY(EnemySystem.class),
 	PROJECTILE(BulletSystem.class),
+	PARTICLE_EFFECTS(ParticleEffectsSystem.class),
 	CHARACTER(CharacterSystem.class);
 
 	private final Class<? extends GameSystem<? extends SystemEventsSubscriber>> systemClass;

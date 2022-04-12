@@ -71,7 +71,6 @@ public class Necronemes extends Game {
 		generateCharactersAnimations();
 		applyAlphaOnModels();
 		generateModelsBoundingBoxes();
-
 	}
 
 	private void generateModelsBoundingBoxes( ) {
@@ -171,14 +170,6 @@ public class Necronemes extends Game {
 				e.printStackTrace();
 			}
 		});
-//		List.of(new CameraSystem(systemsCommonData, soundPlayer),
-//				new InputSystem(systemsCommonData, soundPlayer),
-//				new UserInterfaceSystem(systemsCommonData, assetsManager, soundPlayer),
-//				new InputSystem(systemsCommonData, soundPlayer),
-//				new RenderSystem(systemsCommonData, assetsManager, soundPlayer),
-//				new PlayerSystem(systemsCommonData, assetsManager, soundPlayer),
-//				new CharacterSystem(systemsCommonData, soundPlayer),
-//				new ProfilingSystem(systemsCommonData, soundPlayer)).forEach(gameSystem -> engine.addSystem(gameSystem));
 	}
 
 	@Override
