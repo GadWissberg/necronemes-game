@@ -1,3 +1,4 @@
+#extension GL_EXT_gpu_shader4 : enable
 #ifdef GL_ES
 #define LOWP lowp
 #define MED mediump
@@ -119,6 +120,11 @@ varying float v_fog;
 // Necronemes custom uniforms
 
 uniform float u_affectedByLight;
+uniform vec3 u_shadowlessLightsColors[16];
+uniform vec3 u_shadowlessLightsExtraData[16];
+uniform vec3 u_shadowlessLightsPositions[16];
+uniform int u_numberOfShadowlessLights;
+varying vec3 v_frag_pos;
 
 //
 
@@ -150,11 +156,6 @@ void main() {
     vec4 diffuse = vec4(1.0);
     #endif
 
-    if (u_affectedByLight == 0.0){
-        gl_FragColor.rgb = diffuse.rgb;
-        return;
-    }
-    
     #if defined(emissiveTextureFlag) && defined(emissiveColorFlag)
     vec4 emissive = texture2D(u_emissiveTexture, v_emissiveUV) * u_emissiveColor;
     #elif defined(emissiveTextureFlag)
@@ -171,7 +172,6 @@ void main() {
     #if defined(ambientFlag) && defined(separateAmbientFlag)
     #ifdef shadowMapFlag
     gl_FragColor.rgb = (diffuse.rgb * (v_ambientLight + getShadow() * v_lightDiffuse)) + emissive.rgb;
-    //gl_FragColor.rgb = texture2D(u_shadowTexture, v_shadowMapUv.xy);
     #else
     gl_FragColor.rgb = (diffuse.rgb * (v_ambientLight + v_lightDiffuse)) + emissive.rgb;
     #endif //shadowMapFlag
@@ -179,7 +179,37 @@ void main() {
     #ifdef shadowMapFlag
     gl_FragColor.rgb = getShadow() * (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
     #else
-    gl_FragColor.rgb = (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
+    gl_FragColor.rgb = vec3(0.0);
+    if (u_affectedByLight != 0.0){
+        if (u_numberOfShadowlessLights > 0) {
+            for (int i = 0; i< u_numberOfShadowlessLights; i++){
+                vec3 light = u_shadowlessLightsPositions[i];
+                vec3 sub = light.xyz - v_frag_pos.xyz;
+                vec3 lightDir = normalize(sub);
+                float distance = length(sub);
+                vec3 extra = u_shadowlessLightsExtraData[i];
+                if (distance <= extra.y){
+                    int light_color_index = int(extra.z);
+                    vec3 light_color;
+                    if (light_color_index > -1){
+                        light_color = vec3(u_shadowlessLightsColors[light_color_index]);
+                    } else {
+                        light_color = vec3(1.0);
+                    }
+                    float attenuation = 4.0 * extra.x / (1.0 + (0.01*distance) + (0.9*distance*distance));
+                    float dot_value = dot(v_normal, lightDir);
+                    float intensity = max(dot_value, 0.0);
+                    vec3 value_to_add = (diffuse.rgb *light_color.rgb* (attenuation * intensity));
+                    value_to_add *= distance > (extra.y*5.0/6.0) ? 0.5 : 1.0;
+                    gl_FragColor.rgb += value_to_add;
+                }
+            }
+            gl_FragColor.rgb += emissive.rgb;
+        }
+        gl_FragColor.rgb += (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
+    } else {
+        gl_FragColor.rgb = diffuse.rgb;
+    }
     #endif //shadowMapFlag
     #endif
     #else
@@ -196,7 +226,6 @@ void main() {
     #if defined(ambientFlag) && defined(separateAmbientFlag)
     #ifdef shadowMapFlag
     gl_FragColor.rgb = (diffuse.rgb * (getShadow() * v_lightDiffuse + v_ambientLight)) + specular + emissive.rgb;
-    //gl_FragColor.rgb = texture2D(u_shadowTexture, v_shadowMapUv.xy);
     #else
     gl_FragColor.rgb = (diffuse.rgb * (v_lightDiffuse + v_ambientLight)) + specular + emissive.rgb;
     #endif //shadowMapFlag

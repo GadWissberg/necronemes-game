@@ -106,6 +106,8 @@ public class MapBuilder implements Disposable {
 	public static final int PLAYER_HEALTH = 64;
 
 	public static final String MAP_PATH_TEMP = "assets/maps/%s.json";
+	public static final float INDEPENDENT_LIGHT_RADIUS = 4f;
+	public static final float INDEPENDENT_LIGHT_INTENSITY = 1f;
 	private static final CharacterSoundData auxCharacterSoundData = new CharacterSoundData();
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
@@ -116,6 +118,8 @@ public class MapBuilder implements Disposable {
 	private static final String KEY_PICKUPS = "pickups";
 	private static final String REGION_NAME_BULLET = "bullet";
 	private static final Matrix4 auxMatrix = new Matrix4();
+	private static final String KEY_LIGHTS = "lights";
+	private static final float INDEPENDENT_LIGHT_HEIGHT = 1F;
 	private final Model floorModel;
 	private final PooledEngine engine;
 	private final GameAssetsManager assetsManager;
@@ -333,7 +337,24 @@ public class MapBuilder implements Disposable {
 
 	private void inflateAllElements(final JsonObject mapJsonObject, final MapGraph mapGraph) {
 		inflateCharacters(mapJsonObject, mapGraph);
+		inflateLights(mapJsonObject, mapGraph);
 		inflatePickups(mapJsonObject, mapGraph);
+	}
+
+	private void inflateLights(final JsonObject mapJsonObject, final MapGraph mapGraph) {
+		JsonArray lights = mapJsonObject.getAsJsonArray(KEY_LIGHTS);
+		lights.forEach(element -> inflateLight(mapGraph, element));
+	}
+
+	private void inflateLight(final MapGraph mapGraph, final JsonElement element) {
+		JsonObject lightJsonObject = element.getAsJsonObject();
+		int row = lightJsonObject.get(ROW).getAsInt();
+		int col = lightJsonObject.get(COL).getAsInt();
+		Vector3 position = auxVector3_1.set(col + 0.5f, INDEPENDENT_LIGHT_HEIGHT, row + 0.5f);
+		position.add(0, mapGraph.getNode(col, row).getHeight(), 0);
+		EntityBuilder.beginBuildingEntity(engine)
+				.addShadowlessLightComponent(position, INDEPENDENT_LIGHT_INTENSITY, INDEPENDENT_LIGHT_RADIUS)
+				.finishAndAddToEngine();
 	}
 
 	private void inflatePickups(final JsonObject mapJsonObject, final MapGraph mapGraph) {

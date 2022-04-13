@@ -189,6 +189,12 @@ varying vec3 v_ambientLight;
 
 #endif // lightingFlag
 
+// Necronemes custom uniforms and varyings
+
+varying vec3 v_frag_pos;
+
+//
+
 void main() {
     #ifdef diffuseTextureFlag
     v_diffuseUV = u_diffuseUVTransform.xy + a_texCoord0 * u_diffuseUVTransform.zw;
@@ -248,6 +254,7 @@ void main() {
     #endif
 
     gl_Position = u_projViewTrans * pos;
+    v_frag_pos = vec3(u_worldTrans * vec4(a_position.x, a_position.y, a_position.z, 1.0));
 
     #ifdef shadowMapFlag
     vec4 spos = u_shadowMapProjViewTrans * pos;
@@ -256,11 +263,7 @@ void main() {
     #endif //shadowMapFlag
 
     #if defined(normalFlag)
-    #if defined(skinningFlag)
-    vec3 normal = normalize((u_worldTrans * skinning * vec4(a_normal, 0.0)).xyz);
-    #else
     vec3 normal = normalize(u_normalMatrix * a_normal);
-    #endif
     v_normal = normal;
     #endif // normalFlag
 

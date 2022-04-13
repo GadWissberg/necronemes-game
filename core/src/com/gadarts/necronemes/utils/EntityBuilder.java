@@ -2,6 +2,7 @@ package com.gadarts.necronemes.utils;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -30,7 +31,6 @@ import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.player.Weapon;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
-import com.gadarts.necronemes.map.MapGraphNode;
 import lombok.AccessLevel;
 import lombok.Setter;
 
@@ -76,6 +76,18 @@ public class EntityBuilder {
 		AnimationComponent animComponent = engine.createComponent(AnimationComponent.class);
 		currentEntity.add(animComponent);
 		Optional.ofNullable(animation).ifPresent(a -> animComponent.init(frameDuration, animation));
+		return instance;
+	}
+
+	public EntityBuilder addShadowlessLightComponent(final Vector3 position,
+													 final float intensity,
+													 final float radius) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		ShadowlessLightComponent lightComponent = engine.createComponent(ShadowlessLightComponent.class);
+		lightComponent.init(position, intensity, radius, currentEntity);
+		lightComponent.applyColor(Color.WHITE);
+		lightComponent.applyDuration(0F);
+		currentEntity.add(lightComponent);
 		return instance;
 	}
 
