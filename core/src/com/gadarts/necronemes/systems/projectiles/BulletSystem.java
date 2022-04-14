@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
@@ -48,6 +49,13 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 	private static final Vector3 auxVector3_4 = new Vector3();
 	private static final Bresenham2 bresenham = new Bresenham2();
 	private static final float HIT_SCAN_MAX_DISTANCE = 10F;
+	private final static float HITSCAN_COL_LIGHT_INTENSITY = 0.1F;
+	private final static float HITSCAN_COL_LIGHT_RADIUS = 1.2F;
+	private final static Color HITSCAN_COL_LIGHT_COLOR = Color.YELLOW;
+	private final static float HITSCAN_COL_LIGHT_DURATION = 0.1F;
+	private final static float PROJ_LIGHT_INTENSITY = 0.2F;
+	private final static float PROJ_LIGHT_RADIUS = 2F;
+	private final static Color PROJ_LIGHT_COLOR = Color.valueOf("#8396FF");
 	private ParticleEffect bulletRicochetEffect;
 	private ImmutableArray<Entity> bullets;
 	private ImmutableArray<Entity> collidables;
@@ -136,6 +144,11 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 				Vector3 position = auxVector3_1.set(intersectionPos.x, posNodeCenterPos.y + 1F, intersectionPos.y);
 				EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
 						.addParticleEffectComponent((PooledEngine) getEngine(), bulletRicochetEffect, position)
+						.addShadowlessLightComponent(position,
+								HITSCAN_COL_LIGHT_INTENSITY,
+								HITSCAN_COL_LIGHT_RADIUS,
+								HITSCAN_COL_LIGHT_COLOR,
+								HITSCAN_COL_LIGHT_DURATION)
 						.finishAndAddToEngine();
 				return true;
 			} else {
@@ -148,6 +161,11 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 			Vector3 position = auxVector3_1.set(ComponentsMapper.characterDecal.get(enemy).getDecal().getPosition());
 			EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
 					.addParticleEffectComponent((PooledEngine) getEngine(), bulletRicochetEffect, position)
+					.addShadowlessLightComponent(position,
+							HITSCAN_COL_LIGHT_INTENSITY,
+							HITSCAN_COL_LIGHT_RADIUS,
+							HITSCAN_COL_LIGHT_COLOR,
+							HITSCAN_COL_LIGHT_DURATION)
 					.finishAndAddToEngine();
 			return true;
 		}
@@ -200,6 +218,7 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 				.addBulletComponent(charPos, direction, character, damagePoints[enemyComp.getSkill() - 1])
 				.addAnimationComponent(enemyComp.getEnemyDefinition().getPrimaryAttack().getFrameDuration(), bulletAnim)
 				.addSimpleDecalComponent(charPos, bulletAnim.getKeyFrames()[0], Zero.setZero(), true, true)
+				.addShadowlessLightComponent(charPos, PROJ_LIGHT_INTENSITY, PROJ_LIGHT_RADIUS, PROJ_LIGHT_COLOR)
 				.finishAndAddToEngine();
 		EntityBuilder.beginBuildingEntity((PooledEngine) getEngine())
 				.addParticleEffectComponent((PooledEngine) getEngine(), effect, auxVector3_1.set(charPos), bullet)

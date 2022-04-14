@@ -17,6 +17,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.Array;
@@ -26,6 +27,7 @@ import com.gadarts.necromine.WallCreator;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.assets.MapJsonKeys;
 import com.gadarts.necromine.model.Coords;
+import com.gadarts.necromine.model.RelativeBillboard;
 import com.gadarts.necromine.model.characters.CharacterDefinition;
 import com.gadarts.necromine.model.characters.CharacterTypes;
 import com.gadarts.necromine.model.characters.Direction;
@@ -34,12 +36,14 @@ import com.gadarts.necromine.model.characters.attributes.Agility;
 import com.gadarts.necromine.model.characters.attributes.Strength;
 import com.gadarts.necromine.model.characters.enemies.Enemies;
 import com.gadarts.necromine.model.characters.enemies.EnemyWeaponsDefinitions;
+import com.gadarts.necromine.model.env.EnvironmentDefinitions;
 import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.map.MapNodesTypes;
 import com.gadarts.necromine.model.map.NodeWalls;
 import com.gadarts.necromine.model.map.Wall;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterData;
 import com.gadarts.necronemes.components.character.CharacterSkillsParameters;
@@ -67,6 +71,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+import static com.badlogic.gdx.graphics.g2d.Animation.PlayMode.LOOP;
 import static com.gadarts.necromine.assets.Assets.Atlases;
 import static com.gadarts.necromine.assets.Assets.Atlases.ANUBIS;
 import static com.gadarts.necromine.assets.Assets.Atlases.PLAYER_GENERIC;
@@ -95,8 +100,9 @@ import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_SC
 import static com.gadarts.necromine.model.characters.CharacterTypes.BILLBOARD_Y;
 import static com.gadarts.necromine.model.characters.CharacterTypes.ENEMY;
 import static com.gadarts.necromine.model.characters.CharacterTypes.PLAYER;
+import static com.gadarts.necromine.model.characters.Direction.NORTH;
+import static com.gadarts.necromine.model.characters.Direction.SOUTH;
 import static com.gadarts.necromine.model.characters.SpriteType.IDLE;
-import static com.gadarts.necronemes.Necronemes.BOUNDING_BOX_PREFIX;
 import static com.gadarts.necronemes.components.ComponentsMapper.character;
 import static com.gadarts.necronemes.components.ComponentsMapper.modelInstance;
 import static com.gadarts.necronemes.utils.EntityBuilder.beginBuildingEntity;
@@ -108,6 +114,7 @@ public class MapBuilder implements Disposable {
 	public static final String MAP_PATH_TEMP = "assets/maps/%s.json";
 	public static final float INDEPENDENT_LIGHT_RADIUS = 4f;
 	public static final float INDEPENDENT_LIGHT_INTENSITY = 1f;
+	public static final String BOUNDING_BOX_PREFIX = "box_";
 	private static final CharacterSoundData auxCharacterSoundData = new CharacterSoundData();
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
@@ -120,6 +127,9 @@ public class MapBuilder implements Disposable {
 	private static final Matrix4 auxMatrix = new Matrix4();
 	private static final String KEY_LIGHTS = "lights";
 	private static final float INDEPENDENT_LIGHT_HEIGHT = 1F;
+	private static final String KEY_ENVIRONMENT = "environment";
+	private static final Vector2 auxVector2_1 = new Vector2();
+	private static final Vector2 auxVector2_2 = new Vector2();
 	private final Model floorModel;
 	private final PooledEngine engine;
 	private final GameAssetsManager assetsManager;
@@ -338,7 +348,113 @@ public class MapBuilder implements Disposable {
 	private void inflateAllElements(final JsonObject mapJsonObject, final MapGraph mapGraph) {
 		inflateCharacters(mapJsonObject, mapGraph);
 		inflateLights(mapJsonObject, mapGraph);
+		inflateEnvironment(mapJsonObject, mapGraph);
 		inflatePickups(mapJsonObject, mapGraph);
+	}
+
+	private void inflateEnvSpecifiedComponent(final Coords coord,
+											  final EnvironmentDefinitions type,
+											  final EntityBuilder builder,
+											  final Direction facingDirection) {
+		int col = coord.getCol();
+		int row = coord.getRow();
+		int halfWidth = type.getWidth() / 2;
+		int halfDepth = type.getDepth() / 2;
+		if (facingDirection == NORTH || facingDirection == SOUTH) {
+			int swap = halfWidth;
+			halfWidth = halfDepth;
+			halfDepth = swap;
+		}
+		Vector2 topLeft = auxVector2_1.set(col - halfWidth, row - halfDepth);
+		Vector2 bottomRight = auxVector2_2.set(col + Math.max(halfWidth, 1) - 1, row + Math.max(halfDepth, 1) - 1);
+		builder.addObstacleComponent(topLeft, bottomRight, type);
+	}
+
+	private GameModelInstance inflateEnvironmentModelInstance(final MapGraphNode node,
+															  final int directionIndex,
+															  final EnvironmentDefinitions type,
+															  final float height) {
+		Models def = type.getModelDefinition();
+		String fileName = BOUNDING_BOX_PREFIX + def.getFilePath();
+		ModelBoundingBox box = assetsManager.get(fileName, ModelBoundingBox.class);
+		GameModelInstance modelInstance = new GameModelInstance(assetsManager.getModel(def), box, true, def);
+		Direction direction = Direction.values()[directionIndex];
+		modelInstance.transform.setTranslation(auxVector3_1.set(node.getCol() + 0.5f, 0, node.getRow() + 0.5f));
+		modelInstance.transform.rotate(Vector3.Y, -1 * direction.getDirection(auxVector2_1).angleDeg());
+		modelInstance.transform.translate(type.getOffset(auxVector3_1));
+		EnvironmentDefinitions.handleEvenSize(type, modelInstance, direction);
+		modelInstance.transform.translate(0, node.getHeight() + height, 0);
+		return modelInstance;
+	}
+
+	private GameModelInstance inflateEnvModelInstanceComponent(final MapGraphNode node,
+															   final JsonObject envJsonObject,
+															   final EnvironmentDefinitions type,
+															   final EntityBuilder builder) {
+		int dirIndex = envJsonObject.get(DIRECTION).getAsInt();
+		float height = envJsonObject.get(HEIGHT).getAsFloat();
+		GameModelInstance mi = inflateEnvironmentModelInstance(node, dirIndex, type, height);
+		mi.getAdditionalRenderData().setColorWhenOutside(Color.WHITE);
+		builder.addModelInstanceComponent(mi, true, type.isCastShadow());
+		return mi;
+	}
+
+	private void inflateEnvLightComponent(final EntityBuilder builder,
+										  final EnvironmentDefinitions type,
+										  final GameModelInstance mi,
+										  final int dirIndex) {
+		Optional.ofNullable(type.getLightEmission()).ifPresent(l -> {
+			float degrees = Direction.values()[dirIndex].getDirection(auxVector2_1).angleDeg();
+			Vector3 relativePosition = l.getRelativePosition(auxVector3_2).rotate(Vector3.Y, degrees);
+			Vector3 position = mi.transform.getTranslation(auxVector3_1).add(relativePosition);
+			builder.addShadowlessLightComponent(position, l.getIntensity(), l.getRadius(), Color.WHITE, l.isFlicker());
+		});
+	}
+
+	private void inflateEnvComponents(final MapGraph mapGraph,
+									  final EntityBuilder builder,
+									  final JsonObject envJsonObject,
+									  final Coords coord) {
+		int dirIndex = envJsonObject.get(DIRECTION).getAsInt();
+		EnvironmentDefinitions type = EnvironmentDefinitions.valueOf(envJsonObject.get(TYPE).getAsString());
+		inflateEnvSpecifiedComponent(coord, type, builder, Direction.values()[dirIndex]);
+		MapGraphNode node = mapGraph.getNode(coord.getCol(), coord.getRow());
+		GameModelInstance mi = inflateEnvModelInstanceComponent(node, envJsonObject, type, builder);
+		inflateEnvLightComponent(builder, type, mi, dirIndex);
+		builder.addCollisionComponent();
+	}
+
+	private void inflateEnvironment(final JsonObject mapJsonObject, final MapGraph mapGraph) {
+		JsonArray envs = mapJsonObject.getAsJsonArray(KEY_ENVIRONMENT);
+		envs.forEach(element -> {
+			EntityBuilder builder = EntityBuilder.beginBuildingEntity(engine);
+			JsonObject envJsonObject = element.getAsJsonObject();
+			Coords coord = new Coords(envJsonObject.get(ROW).getAsInt(), envJsonObject.get(COL).getAsInt());
+			inflateEnvComponents(mapGraph, builder, envJsonObject, coord);
+			Entity entity = builder.finishAndAddToEngine();
+			GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(entity).getModelInstance();
+			Vector3 position = modelInstance.transform.getTranslation(auxVector3_1);
+			EnvironmentDefinitions type = EnvironmentDefinitions.valueOf(envJsonObject.get(TYPE).getAsString());
+			RelativeBillboard relativeBillboard = type.getRelativeBillboard();
+			Optional.ofNullable(relativeBillboard).ifPresent(r -> {
+				TextureAtlas atlas = assetsManager.getAtlas(r.getBillboard());
+				Array<TextureAtlas.AtlasRegion> f = atlas.findRegions(r.getBillboard().getName().toLowerCase());
+				Direction dir = Direction.values()[envJsonObject.get(DIRECTION).getAsInt()];
+				float degrees = dir.getDirection(auxVector2_1).angleDeg() + ((dir == NORTH || dir == SOUTH) ? 180 : 0);
+				Vector3 relativePosition = r.getRelativePosition(auxVector3_2).rotate(Vector3.Y, degrees);
+				addRelativeBillboardEntity(position, r, f, relativePosition);
+			});
+		});
+	}
+
+	private void addRelativeBillboardEntity(final Vector3 position,
+											final RelativeBillboard r,
+											final Array<TextureAtlas.AtlasRegion> f,
+											final Vector3 relativePosition) {
+		EntityBuilder.beginBuildingEntity(engine)
+				.addSimpleDecalComponent(position.add(relativePosition), f.get(0), true, true)
+				.addAnimationComponent(r.getFrameDuration(), new Animation<>(r.getFrameDuration(), f, LOOP))
+				.finishAndAddToEngine();
 	}
 
 	private void inflateLights(final JsonObject mapJsonObject, final MapGraph mapGraph) {
@@ -488,15 +604,15 @@ public class MapBuilder implements Disposable {
 		simpleDecalComponent.addRelatedDecal(skillFlowerDecal);
 	}
 
-	private CharacterData inflateCharData(JsonObject characterJsonObject, Enemies type, int skill, Vector3 position) {
+	private CharacterData inflateCharData(JsonObject characterJsonObject, Enemies type, int skill, Vector3 pos) {
 		auxCharacterSoundData.set(type.getPainSound(), type.getDeathSound(), type.getStepSound());
 		CharacterSkillsParameters skills = new CharacterSkillsParameters(
 				type.getHealth().get(skill - 1),
 				type.getAgility().get(skill - 1),
 				type.getStrength().get(skill - 1),
 				type.getAccuracy() != null ? type.getAccuracy()[skill - 1] : null);
-		CharacterData data = new CharacterData(position, Direction.values()[characterJsonObject.get(DIRECTION).getAsInt()], skills, auxCharacterSoundData);
-		return data;
+		Direction direction = Direction.values()[characterJsonObject.get(DIRECTION).getAsInt()];
+		return new CharacterData(pos, direction, skills, auxCharacterSoundData);
 	}
 
 	private Animation<TextureAtlas.AtlasRegion> inflateEnemyBulletFrames(Enemies type) {
@@ -546,8 +662,7 @@ public class MapBuilder implements Disposable {
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
 		Dimension mapSize = inflateNodes(mapJsonObj.get(TILES).getAsJsonObject());
 		float ambient = GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, MapJsonKeys.AMBIENT, 0);
-		MapGraph mapGraph = new MapGraph(mapSize, engine, ambient);
-		return mapGraph;
+		return new MapGraph(mapSize, engine, ambient);
 	}
 
 	private Dimension inflateNodes(final JsonObject tilesJsonObject) {

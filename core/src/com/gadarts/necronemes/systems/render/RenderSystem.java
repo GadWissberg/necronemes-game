@@ -3,6 +3,7 @@ package com.gadarts.necronemes.systems.render;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
@@ -12,12 +13,14 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.graphics.g3d.decals.DecalBatch;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -45,19 +48,36 @@ import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.enemy.EnemyAiStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
-import static com.gadarts.necronemes.components.ComponentsMapper.*;
+import static com.gadarts.necromine.model.characters.SpriteType.ATTACK_PRIMARY;
+import static com.gadarts.necronemes.components.ComponentsMapper.animation;
+import static com.gadarts.necronemes.components.ComponentsMapper.character;
+import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
+import static com.gadarts.necronemes.components.ComponentsMapper.modelInstance;
+import static com.gadarts.necronemes.components.ComponentsMapper.player;
+import static com.gadarts.necronemes.components.ComponentsMapper.shadowlessLight;
+import static com.gadarts.necronemes.components.ComponentsMapper.simpleDecal;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	public static final float LIGHT_MAX_RADIUS = 7f;
+	public static final float FLICKER_RANDOM_MIN = 0.95F;
+	public static final float FLICKER_RANDOM_MAX = 1.05F;
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
 	private static final Vector3 auxVector3_3 = new Vector3();
 	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private static final int DECALS_POOL_SIZE = 200;
 	private static final int ICON_FLOWER_APPEARANCE_DURATION = 1000;
+	private static final float DECAL_DARKEST_COLOR = 0.2f;
+	private static final Color auxColor = new Color();
+	private static final float DECAL_LIGHT_OFFSET = 1.5f;
+	private static final List<Entity> auxLightsListToRemove = new ArrayList<>();
+	private static final int FLICKER_MAX_INTERVAL = 150;
 	private final Texture iconFlowerLookingFor;
 	private final StringBuilder stringBuilder = new StringBuilder();
 	private final GlyphLayout skillFlowerGlyph;
@@ -152,7 +172,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		modelBatch.end();
 	}
 
-	private void applyLightsOnModel(final ModelInstanceComponent mic, Entity entity) {
+	private void applyLightsOnModel(final ModelInstanceComponent mic) {
 		List<Entity> nearbyLights = mic.getModelInstance().getAdditionalRenderData().getNearbyLights();
 		nearbyLights.clear();
 		if (!DefaultGameSettings.DISABLE_LIGHTS) {
@@ -188,7 +208,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		modelBatch.render(modelInstance, environment);
 		SystemsCommonData systemsCommonData = getSystemsCommonData();
 		systemsCommonData.setNumberOfVisible(systemsCommonData.getNumberOfVisible() + 1);
-		applyLightsOnModel(modelInstanceComponent,entity);
+		applyLightsOnModel(modelInstanceComponent);
 	}
 
 	private boolean shouldSkipRenderModel(Entity exclude,
@@ -203,6 +223,11 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
+		updateLights((PooledEngine) getEngine());
+		render(deltaTime);
+	}
+
+	private void render(float deltaTime) {
 		getSystemsCommonData().setNumberOfVisible(0);
 		resetDisplay(Color.BLACK);
 		renderModels(modelBatch);
@@ -212,7 +237,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		renderSkillFlowersText();
 	}
 
-	private void renderParticleEffects( ) {
+	private void renderParticleEffects() {
 		modelBatch.begin(getSystemsCommonData().getCamera());
 		modelBatch.render(getSystemsCommonData().getParticleSystem(), environment);
 		modelBatch.end();
@@ -327,14 +352,127 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> {
 		}
 	}
 
+	private boolean shouldApplyLightsOnDecal(final Entity entity,
+											 final CharacterSpriteData spriteData) {
+		Decal decal = ComponentsMapper.characterDecal.get(entity).getDecal();
+		TextureAtlas.AtlasRegion textureRegion = (TextureAtlas.AtlasRegion) decal.getTextureRegion();
+		if (ComponentsMapper.enemy.has(entity)) {
+			return spriteData.getSpriteType() != ATTACK_PRIMARY;
+		} else {
+			return shouldApplyLightsOnPlayerDecal(spriteData, textureRegion);
+		}
+	}
+
+	private boolean shouldApplyLightsOnPlayerDecal(final CharacterSpriteData spriteData,
+												   final TextureAtlas.AtlasRegion textureRegion) {
+		boolean noInHitFrameIndex = textureRegion.index != spriteData.getPrimaryAttackHitFrameIndex();
+		boolean noPrimaryAttack = spriteData.getSpriteType() != ATTACK_PRIMARY || noInHitFrameIndex;
+		boolean meleeWeapon = getSystemsCommonData().getStorage().getSelectedWeapon().isMelee();
+		return noPrimaryAttack || meleeWeapon;
+	}
+
+	void setDecalColorAccordingToLights(final Entity entity) {
+		Decal decal = ComponentsMapper.characterDecal.get(entity).getDecal();
+		if (shouldApplyLightsOnDecal(entity, ComponentsMapper.character.get(entity).getCharacterSpriteData())) {
+			findClosestLight(decal);
+			float ambient = getSystemsCommonData().getMap().getAmbient();
+			Color color = decal.getColor().add(auxColor.set(ambient, ambient, ambient, ambient));
+			decal.setColor(color);
+		} else {
+			decal.setColor(Color.WHITE);
+		}
+	}
+
+	private void findClosestLight(Decal decal) {
+		float minDistance = Float.MAX_VALUE;
+		minDistance = applyLightsOnDecal(decal, minDistance);
+		if (minDistance == Float.MAX_VALUE) {
+			decal.setColor(DECAL_DARKEST_COLOR, DECAL_DARKEST_COLOR, DECAL_DARKEST_COLOR, 1f);
+		}
+	}
+
+	private float convertDistanceToColorValueForDecal(final float maxLightDistanceForDecal, final float distance) {
+		return MathUtils.map(
+				0,
+				(maxLightDistanceForDecal - DECAL_LIGHT_OFFSET),
+				DECAL_DARKEST_COLOR,
+				1f,
+				maxLightDistanceForDecal - distance);
+	}
+
+	private float calculateDecalColorAffectedByLight(final Decal d,
+													 float minDistance,
+													 final float distance,
+													 final float maxLightDistanceForDecal) {
+		float newC = convertDistanceToColorValueForDecal(maxLightDistanceForDecal, distance);
+		Color c = d.getColor();
+		if (minDistance == Float.MAX_VALUE) {
+			d.setColor(min(newC, 1f), min(newC, 1f), min(newC, 1f), 1f);
+		} else {
+			d.setColor(min(max(c.r, newC), 1f), min(max(c.g, newC), 1f), min(max(c.b, newC), 1f), 1f);
+		}
+		minDistance = min(minDistance, distance);
+		return minDistance;
+	}
+
+	private float applyLightOnDecal(final Decal decal, float minDistance, final Entity light) {
+		float distance = shadowlessLight.get(light).getPosition(auxVector3_1).dst(decal.getPosition());
+		float maxLightDistanceForDecal = shadowlessLight.get(light).getRadius();
+		if (distance <= maxLightDistanceForDecal) {
+			minDistance = calculateDecalColorAffectedByLight(decal, minDistance, distance, maxLightDistanceForDecal);
+		}
+		return minDistance;
+	}
+
+	private float applyLightsOnDecal(final Decal decal, float minDistance) {
+		for (Entity light : lightsEntities) {
+			minDistance = applyLightOnDecal(decal, minDistance, light);
+		}
+		return minDistance;
+	}
+
 	private void renderCharacterDecal(final Entity entity) {
 		Decal decal = characterDecal.get(entity).getDecal();
 		Vector3 decalPosition = decal.getPosition();
 		Camera camera = getSystemsCommonData().getCamera();
-		decal.lookAt(auxVector3_1.set(decalPosition).sub(camera.direction), camera.up);
 		float ambient = getSystemsCommonData().getMap().getAmbient();
 		decal.setColor(ambient, ambient, ambient, 1F);
+		setDecalColorAccordingToLights(entity);
+		decal.lookAt(auxVector3_1.set(decalPosition).sub(camera.direction), camera.up);
 		decalBatch.add(decal);
+	}
+
+	private void updateLights(final PooledEngine engine) {
+		for (Entity light : lightsEntities) {
+			updateLight(light);
+		}
+		if (!auxLightsListToRemove.isEmpty()) {
+			for (Entity light : auxLightsListToRemove) {
+				engine.removeEntity(light);
+			}
+			auxLightsListToRemove.clear();
+		}
+	}
+
+	private void updateFlicker(final ShadowlessLightComponent lc, final long now) {
+		if (lc.isFlicker() && now >= lc.getNextFlicker()) {
+			lc.setIntensity(MathUtils.random(FLICKER_RANDOM_MIN, FLICKER_RANDOM_MAX) * lc.getOriginalIntensity());
+			lc.setRadius(MathUtils.random(FLICKER_RANDOM_MIN, FLICKER_RANDOM_MAX) * lc.getOriginalRadius());
+			lc.setNextFlicker(now + MathUtils.random(FLICKER_MAX_INTERVAL));
+		}
+	}
+
+	private void updateLight(final Entity light) {
+		ShadowlessLightComponent lc = shadowlessLight.get(light);
+		long now = TimeUtils.millis();
+		updateFlicker(lc, now);
+		if (ComponentsMapper.simpleDecal.has(light)) {
+			lc.setPosition(ComponentsMapper.simpleDecal.get(lc.getParent()).getDecal().getPosition());
+		}
+		float duration = lc.getDuration();
+		if (duration > 0 && TimeUtils.timeSinceMillis(lc.getBeginTime()) >= (duration * 1000F)) {
+			auxLightsListToRemove.add(light);
+		}
 	}
 
 	private void initializeCharacterDecalForRendering(float deltaTime, Entity entity) {

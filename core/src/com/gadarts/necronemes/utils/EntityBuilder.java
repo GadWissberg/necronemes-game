@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.TimeUtils;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.enemies.Enemies;
+import com.gadarts.necromine.model.env.EnvironmentDefinitions;
 import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
@@ -81,13 +82,49 @@ public class EntityBuilder {
 
 	public EntityBuilder addShadowlessLightComponent(final Vector3 position,
 													 final float intensity,
-													 final float radius) {
+													 final float radius,
+													 final Color color) {
+		return addShadowlessLightComponent(position, intensity, radius, color, 0F, false);
+	}
+
+	public EntityBuilder addShadowlessLightComponent(final Vector3 position,
+													 final float intensity,
+													 final float radius,
+													 final Color color,
+													 final float duration) {
+		return addShadowlessLightComponent(position, intensity, radius, color, duration, false);
+	}
+
+	public EntityBuilder addShadowlessLightComponent(final Vector3 position,
+													 final float intensity,
+													 final float radius,
+													 final Color color,
+													 final boolean flicker) {
+		return addShadowlessLightComponent(position, intensity, radius, color, 0F, flicker);
+	}
+
+	public EntityBuilder addShadowlessLightComponent(final Vector3 position,
+													 final float intensity,
+													 final float radius,
+													 final Color color,
+													 final float duration,
+													 final boolean flicker) {
 		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
 		ShadowlessLightComponent lightComponent = engine.createComponent(ShadowlessLightComponent.class);
-		lightComponent.init(position, intensity, radius, currentEntity);
-		lightComponent.applyColor(Color.WHITE);
-		lightComponent.applyDuration(0F);
+		lightComponent.init(position, intensity, radius, currentEntity, flicker);
+		lightComponent.applyColor(color);
+		lightComponent.applyDuration(duration);
 		currentEntity.add(lightComponent);
+		return instance;
+	}
+
+	public EntityBuilder addObstacleComponent(final Vector2 topLeft,
+											  final Vector2 bottomRight,
+											  final EnvironmentDefinitions type) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		ObstacleComponent obstacleComponent = engine.createComponent(ObstacleComponent.class);
+		obstacleComponent.init(topLeft, bottomRight, type);
+		currentEntity.add(obstacleComponent);
 		return instance;
 	}
 
@@ -296,5 +333,9 @@ public class EntityBuilder {
 	private void init(final PooledEngine engine) {
 		this.engine = engine;
 		this.currentEntity = engine.createEntity();
+	}
+
+	public EntityBuilder addShadowlessLightComponent(Vector3 position, float intensity, float radius) {
+		return addShadowlessLightComponent(position, intensity, radius, Color.WHITE, 0F, false);
 	}
 }

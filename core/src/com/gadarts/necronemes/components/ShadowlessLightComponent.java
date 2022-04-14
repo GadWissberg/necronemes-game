@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.TimeUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 public class ShadowlessLightComponent implements GameComponent {
@@ -17,15 +18,24 @@ public class ShadowlessLightComponent implements GameComponent {
 	private float duration;
 	private long beginTime;
 	private Entity parent;
+
+	@Setter
 	private float intensity;
+
+	@Setter
 	private float radius;
+	private boolean flicker;
+	@Setter
+	private long nextFlicker;
+	private float originalIntensity;
+	private float originalRadius;
 
 	public Color getColor(Color output) {
 		return output.set(color);
 	}
 
 	@Override
-	public void reset( ) {
+	public void reset() {
 
 	}
 
@@ -39,16 +49,23 @@ public class ShadowlessLightComponent implements GameComponent {
 		this.beginTime = TimeUtils.millis();
 	}
 
-	public void init(Vector3 position, float intensity, float radius, Entity parent) {
+	public void init(Vector3 position, float intensity, float radius, Entity parent, boolean flicker) {
+		this.originalIntensity = intensity;
+		this.originalRadius = radius;
 		this.position.set(position);
 		this.intensity = intensity;
 		this.radius = radius;
 		this.parent = parent;
+		this.flicker = flicker;
 		color.set(Color.WHITE);
 		duration = -1L;
 	}
 
 	public Vector3 getPosition(Vector3 output) {
 		return output.set(position);
+	}
+
+	public void setPosition(Vector3 position) {
+		this.position.set(position);
 	}
 }
