@@ -125,6 +125,9 @@ uniform vec3 u_shadowlessLightsExtraData[16];
 uniform vec3 u_shadowlessLightsPositions[16];
 uniform int u_numberOfShadowlessLights;
 varying vec3 v_frag_pos;
+uniform float u_screenWidth;
+uniform float u_screenHeight;
+uniform sampler2D u_shadows;
 
 //
 
@@ -207,6 +210,12 @@ void main() {
             gl_FragColor.rgb += emissive.rgb;
         }
         gl_FragColor.rgb += (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
+        vec2 c= gl_FragCoord.xy;
+        c.x/=u_screenWidth;
+        c.y/=u_screenHeight;
+        vec4 color=texture2D(u_shadows, c);
+        color.rgba *= color.a*10.0;
+        gl_FragColor.rgb+=vec3(gl_FragColor.r*color.a,gl_FragColor.g*color.a, gl_FragColor.b*color.a);
     } else {
         gl_FragColor.rgb = diffuse.rgb;
     }

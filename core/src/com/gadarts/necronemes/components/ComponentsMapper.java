@@ -27,6 +27,7 @@ public class ComponentsMapper {
 	public static final ComponentMapper<ParticleComponent> particle = ComponentMapper.getFor(ParticleComponent.class);
 	public static final ComponentMapper<ParticleEffectParentComponent> particleParent = ComponentMapper.getFor(ParticleEffectParentComponent.class);
 	public static final ComponentMapper<ShadowlessLightComponent> shadowlessLight = ComponentMapper.getFor(ShadowlessLightComponent.class);
+	public static final ComponentMapper<StaticLightComponent> staticLight = ComponentMapper.getFor(StaticLightComponent.class);
 	public static final ComponentMapper<ObstacleComponent> obstacle = ComponentMapper.getFor(ObstacleComponent.class);
 }
 

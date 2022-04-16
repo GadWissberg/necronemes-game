@@ -14,6 +14,7 @@ uniform samplerCube u_depthMapCube;
 uniform float u_cameraFar;
 uniform vec3 u_lightPosition;
 uniform float u_type;
+uniform float u_radius;
 
 
 varying vec4 v_position;
@@ -37,17 +38,13 @@ void main()
         }
     }
     // Point light, just get the depth given light vector
-    else if (u_type==2.0){
+    else if (u_type==0.0){
         lenDepthMap = textureCube(u_depthMapCube, lightDirection).a;
     }
 
-    if (lenDepthMap>lenToLight-0.0022 && lenToLight < 0.4){
-        vec3 light_color = vec3(1.0);
-        float attenuation = 4.0 / (1.0 + (0.01*lenToLight) + (128.0*lenToLight*lenToLight));
-        float value_to_add = (attenuation);
-        intensity += value_to_add;
-    } else if (lenToLight > 0.5 && lenToLight < 1.5){
-        intensity=0.001*(1.0-lenToLight) + 0.0001*(1.0-lenToLight)*(1.0-lenToLight)*(1.0-lenToLight);
+    if (lenDepthMap>lenToLight-0.0022 && lenToLight < u_radius){
+        float attenuation = 16.0 / ((256.0*lenToLight) + (1028.0*lenToLight*lenToLight) + (1028.0*lenToLight*lenToLight*lenToLight));
+        intensity += attenuation;
     }
 
     gl_FragColor     = vec4(intensity);

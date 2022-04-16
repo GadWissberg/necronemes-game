@@ -14,6 +14,7 @@ import lombok.Setter;
 @Setter
 @Getter
 public class SystemsCommonData {
+	public static final int CAMERA_LIGHT_FAR = 10;
 
 	@Setter(AccessLevel.NONE)
 	private final String versionName;

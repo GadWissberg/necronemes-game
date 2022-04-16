@@ -407,7 +407,7 @@ public class MapBuilder implements Disposable {
 			float degrees = Direction.values()[dirIndex].getDirection(auxVector2_1).angleDeg();
 			Vector3 relativePosition = l.getRelativePosition(auxVector3_2).rotate(Vector3.Y, degrees);
 			Vector3 position = mi.transform.getTranslation(auxVector3_1).add(relativePosition);
-			builder.addShadowlessLightComponent(position, l.getIntensity(), l.getRadius(), Color.WHITE, l.isFlicker());
+			builder.addStaticLightComponent(position, l.getIntensity(), l.getRadius(), Color.WHITE);
 		});
 	}
 

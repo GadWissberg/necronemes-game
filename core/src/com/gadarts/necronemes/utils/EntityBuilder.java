@@ -338,4 +338,12 @@ public class EntityBuilder {
 	public EntityBuilder addShadowlessLightComponent(Vector3 position, float intensity, float radius) {
 		return addShadowlessLightComponent(position, intensity, radius, Color.WHITE, 0F, false);
 	}
+
+	public EntityBuilder addStaticLightComponent(Vector3 position, float intensity, float radius, Color white) {
+		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
+		StaticLightComponent lightComponent = engine.createComponent(StaticLightComponent.class);
+		lightComponent.init(position, intensity, radius);
+		currentEntity.add(lightComponent);
+		return instance;
+	}
 }

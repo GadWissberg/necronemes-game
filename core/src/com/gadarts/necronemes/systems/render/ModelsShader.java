@@ -1,9 +1,11 @@
 package com.gadarts.necronemes.systems.render;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.math.Vector3;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.ShadowlessLightComponent;
@@ -26,25 +28,32 @@ public class ModelsShader extends DefaultShader {
 	private final float[] lightsPositions = new float[MAX_LIGHTS * 3];
 	private final float[] lightsExtraData = new float[MAX_LIGHTS * LIGHT_EXTRA_DATA_SIZE];
 	private final float[] lightsColors = new float[MAX_LIGHTS * 3];
+	private final FrameBuffer shadowFrameBuffer;
 	private int uniformLocAffectedByLight;
 	private int uniformLocNumberOfShadowlessLights;
 	private int uniformLocShadowlessLightsPositions;
 	private int uniformLocShadowlessLightsExtraData;
 	private int uniformLocShadowlessLightsColors;
 
-	public ModelsShader(Renderable renderable, Config mainShaderConfig) {
+	public ModelsShader(Renderable renderable, Config mainShaderConfig, FrameBuffer shadowFrameBuffer) {
 		super(renderable, mainShaderConfig);
+		this.shadowFrameBuffer = shadowFrameBuffer;
 	}
 
 	@Override
 	public void init( ) {
 		super.init();
+		final int textureNum = 30;
+		shadowFrameBuffer.getColorBufferTexture().bind(textureNum);
+		program.bind();
+		program.setUniformi("u_shadows", textureNum);
+		program.setUniformf("u_screenWidth", Gdx.graphics.getWidth());
+		program.setUniformf("u_screenHeight", Gdx.graphics.getHeight());
 		uniformLocAffectedByLight = program.getUniformLocation(UNIFORM_AFFECTED_BY_LIGHT);
 		uniformLocNumberOfShadowlessLights = program.getUniformLocation(UNIFORM_NUMBER_OF_SHADOWLESS_LIGHTS);
 		uniformLocShadowlessLightsPositions = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_POSITIONS);
 		uniformLocShadowlessLightsExtraData = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA);
 		uniformLocShadowlessLightsColors = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_COLORS);
-		program.bind();
 		if (program.getLog().length() != 0) {
 			System.out.println(program.getLog());
 		}

@@ -75,7 +75,11 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 
 	@Override
 	public boolean keyDown(int keycode) {
-		return false;
+		if (DefaultGameSettings.DEBUG_INPUT) return false;
+		for (InputSystemEventsSubscriber subscriber : subscribers) {
+			subscriber.keyDown(keycode);
+		}
+		return true;
 	}
 
 	@Override
