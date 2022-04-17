@@ -50,7 +50,6 @@ public class ShadowMapShader extends BaseShader {
 		super.begin(camera, context);
 		context.setDepthTest(GL20.GL_LEQUAL);
 		context.setCullFace(GL20.GL_BACK);
-
 	}
 
 	@Override

@@ -29,5 +29,6 @@ public class ComponentsMapper {
 	public static final ComponentMapper<ShadowlessLightComponent> shadowlessLight = ComponentMapper.getFor(ShadowlessLightComponent.class);
 	public static final ComponentMapper<StaticLightComponent> staticLight = ComponentMapper.getFor(StaticLightComponent.class);
 	public static final ComponentMapper<ObstacleComponent> obstacle = ComponentMapper.getFor(ObstacleComponent.class);
+	public static final ComponentMapper<WallComponent> wall = ComponentMapper.getFor(WallComponent.class);
 }
 

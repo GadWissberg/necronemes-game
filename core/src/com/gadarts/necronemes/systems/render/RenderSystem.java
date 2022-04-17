@@ -23,8 +23,7 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.gadarts.necromine.assets.Assets;
@@ -35,12 +34,14 @@ import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
+import com.gadarts.necronemes.components.LightComponent;
 import com.gadarts.necronemes.components.ShadowlessLightComponent;
 import com.gadarts.necronemes.components.StaticLightComponent;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.CharacterAnimation;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
+import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.character.CharacterSpriteData;
 import com.gadarts.necronemes.components.enemy.EnemyComponent;
 import com.gadarts.necronemes.components.mi.AdditionalRenderData;
@@ -87,6 +88,8 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	private static final float DECAL_LIGHT_OFFSET = 1.5f;
 	private static final List<Entity> auxLightsListToRemove = new ArrayList<>();
 	private static final int FLICKER_MAX_INTERVAL = 150;
+	private static final Circle auxCircle = new Circle();
+	private static final Rectangle auxRect = new Rectangle();
 	private final Texture iconFlowerLookingFor;
 	private final StringBuilder stringBuilder = new StringBuilder();
 	private final GlyphLayout skillFlowerGlyph;
@@ -259,12 +262,30 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 							 boolean renderLight) {
 		ModelInstanceComponent modelInstanceComponent = modelInstance.get(entity);
 		if (!shouldSkipRenderModel(exclude, camera, entity, modelInstanceComponent)) {
-			GameModelInstance modelInstance = modelInstanceComponent.getModelInstance();
-			modelBatch.render(modelInstance, environment);
-			SystemsCommonData systemsCommonData = getSystemsCommonData();
-			systemsCommonData.setNumberOfVisible(systemsCommonData.getNumberOfVisible() + 1);
+			modelBatch.render(modelInstanceComponent.getModelInstance(), environment);
+			getSystemsCommonData().setNumberOfVisible(getSystemsCommonData().getNumberOfVisible() + 1);
+			if (ComponentsMapper.floor.has(entity)) {
+				renderCharactersShadowsOnFloor(entity);
+			}
 			if (renderLight) {
 				applyLightsOnModel(modelInstanceComponent);
+			}
+		}
+	}
+
+	private void renderCharactersShadowsOnFloor(Entity entity) {
+		List<Entity> nearbyCharacters = ComponentsMapper.floor.get(entity).getNearbyCharacters();
+		nearbyCharacters.clear();
+		for (Entity character : characterDecalsEntities) {
+			Vector3 position = characterDecal.get(character).getDecal().getPosition();
+			auxCircle.set(position.x, position.z, CharacterComponent.CHAR_RAD*3F);
+			Vector3 floorPos = modelInstance.get(entity).getModelInstance().transform.getTranslation(auxVector3_1);
+			auxRect.set(floorPos.x, floorPos.z, 1F, 1F);
+			if (Intersector.overlaps(auxCircle, auxRect)) {
+				nearbyCharacters.add(character);
+				if (nearbyCharacters.size() >= 2) {
+					return;
+				}
 			}
 		}
 	}
@@ -536,9 +557,9 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		lightComponent.setShadowFrameBuffer(frameBuffer);
 	}
 
-	private float applyLightOnDecal(final Decal decal, float minDistance, final Entity light) {
-		float distance = shadowlessLight.get(light).getPosition(auxVector3_1).dst(decal.getPosition());
-		float maxLightDistanceForDecal = shadowlessLight.get(light).getRadius();
+	private float applyLightOnDecal(final Decal decal, float minDistance, LightComponent lightComponent) {
+		float distance = lightComponent.getPosition(auxVector3_1).dst(decal.getPosition());
+		float maxLightDistanceForDecal = lightComponent.getRadius();
 		if (distance <= maxLightDistanceForDecal) {
 			minDistance = calculateDecalColorAffectedByLight(decal, minDistance, distance, maxLightDistanceForDecal);
 		}
@@ -547,7 +568,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 
 	private float applyLightsOnDecal(final Decal decal, float minDistance) {
 		for (Entity light : shadowlessLightsEntities) {
-			minDistance = applyLightOnDecal(decal, minDistance, light);
+			minDistance = applyLightOnDecal(decal, minDistance, shadowlessLight.get(light));
+		}
+		for (Entity light : staticLightsEntities) {
+			minDistance = applyLightOnDecal(decal, minDistance, ComponentsMapper.staticLight.get(light));
 		}
 		return minDistance;
 	}

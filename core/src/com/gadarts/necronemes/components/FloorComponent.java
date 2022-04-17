@@ -1,7 +1,11 @@
 package com.gadarts.necronemes.components;
 
+import com.badlogic.ashley.core.Entity;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 public class FloorComponent implements GameComponent {
@@ -13,6 +17,9 @@ public class FloorComponent implements GameComponent {
 	public static final int AO_MASK_NORTH_WEST = 0B00100000;
 	public static final int AO_MASK_NORTH = 0B01000000;
 	public static final int AO_MASK_NORTH_EAST = 0B10000000;
+
+	@Getter
+	private final List<Entity> nearbyCharacters = new ArrayList<>();
 	@Setter
 	private int ambientOcclusion;
 

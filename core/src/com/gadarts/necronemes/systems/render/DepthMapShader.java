@@ -1,6 +1,8 @@
 package com.gadarts.necronemes.systems.render;
 
+import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g3d.Attributes;
 import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.Shader;
@@ -9,6 +11,7 @@ import com.badlogic.gdx.graphics.g3d.shaders.BaseShader;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
 import com.badlogic.gdx.graphics.g3d.utils.RenderContext;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.gadarts.necronemes.components.ComponentsMapper;
 
 import static com.badlogic.gdx.graphics.GL20.*;
 
@@ -34,7 +37,6 @@ public class DepthMapShader extends BaseShader {
 		super.begin(camera, context);
 		context.setDepthTest(GL_LEQUAL);
 		context.setCullFace(GL_BACK);
-
 	}
 
 	@Override

@@ -123,10 +123,12 @@ uniform float u_affectedByLight;
 uniform vec3 u_shadowlessLightsColors[16];
 uniform vec3 u_shadowlessLightsExtraData[16];
 uniform vec3 u_shadowlessLightsPositions[16];
+uniform vec2 u_nearbyCharactersPositions[2];
 uniform int u_numberOfShadowlessLights;
 varying vec3 v_frag_pos;
 uniform float u_screenWidth;
 uniform float u_screenHeight;
+uniform int u_numberOfNearbyCharacters;
 uniform sampler2D u_shadows;
 
 //
@@ -214,8 +216,22 @@ void main() {
         c.x/=u_screenWidth;
         c.y/=u_screenHeight;
         vec4 color=texture2D(u_shadows, c);
-        color.rgba *= color.a*10.0;
+        color.rgba *= color.a*5.0;
         gl_FragColor.rgb+=vec3(gl_FragColor.r*color.a,gl_FragColor.g*color.a, gl_FragColor.b*color.a);
+
+        float minDistanceToCharacter = 21390950.0;
+        for (int i = 0; i< u_numberOfNearbyCharacters; i++){
+            vec2 sub = u_nearbyCharactersPositions[i].xy - v_frag_pos.xz;
+            float distance = length(sub);
+            if (distance < minDistanceToCharacter){
+                minDistanceToCharacter = distance;
+            }
+        }
+
+        if ( minDistanceToCharacter < 0.5){
+            gl_FragColor.rgb*=0.025+minDistanceToCharacter*1.5+(minDistanceToCharacter*0.5);
+        }
+
     } else {
         gl_FragColor.rgb = diffuse.rgb;
     }

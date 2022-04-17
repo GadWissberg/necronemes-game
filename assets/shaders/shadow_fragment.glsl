@@ -42,8 +42,8 @@ void main()
         lenDepthMap = textureCube(u_depthMapCube, lightDirection).a;
     }
 
-    if (lenDepthMap>lenToLight-0.0022 && lenToLight < u_radius){
-        float attenuation = 16.0 / ((256.0*lenToLight) + (1028.0*lenToLight*lenToLight) + (1028.0*lenToLight*lenToLight*lenToLight));
+    if (lenDepthMap>lenToLight-0.0022 && lenToLight < u_radius*0.1){
+        float attenuation = 32.0 / ((128.0*lenToLight) + (256.0*lenToLight*lenToLight) + (256.0*lenToLight*lenToLight*lenToLight));
         intensity += attenuation;
     }
 
