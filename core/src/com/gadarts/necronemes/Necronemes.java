@@ -9,27 +9,20 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
+import com.badlogic.gdx.math.collision.BoundingBox;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necronemes.components.character.CharacterAnimation;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
-import com.gadarts.necronemes.components.mi.ModelBoundingBox;
+import com.gadarts.necronemes.map.MapBuilder;
 import com.gadarts.necronemes.screens.BattleScreen;
 import com.gadarts.necronemes.systems.*;
-import com.gadarts.necronemes.systems.camera.CameraSystem;
-import com.gadarts.necronemes.systems.character.CharacterSystem;
-import com.gadarts.necronemes.systems.input.InputSystem;
-import com.gadarts.necronemes.systems.player.PlayerSystem;
-import com.gadarts.necronemes.systems.render.RenderSystem;
-import com.gadarts.necronemes.systems.ui.UserInterfaceSystem;
-import com.gadarts.necronemes.map.MapBuilder;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Necronemes extends Game {
@@ -79,8 +72,8 @@ public class Necronemes extends Game {
 					Model model = assetsManager.get(def.getFilePath(), Model.class);
 					assetsManager.addAsset(
 							BOUNDING_BOX_PREFIX + def.getFilePath(),
-							ModelBoundingBox.class,
-							(ModelBoundingBox) model.calculateBoundingBox(new ModelBoundingBox(def)));
+							BoundingBox.class,
+							model.calculateBoundingBox(new BoundingBox()));
 				});
 	}
 

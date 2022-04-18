@@ -84,28 +84,6 @@ varying vec3 v_lightDiffuse;
 varying vec3 v_lightSpecular;
 #endif //specularFlag
 
-#ifdef shadowMapFlag
-uniform sampler2D u_shadowTexture;
-uniform float u_shadowPCFOffset;
-varying vec3 v_shadowMapUv;
-#define separateAmbientFlag
-
-float getShadowness(vec2 offset)
-{
-    const vec4 bitShifts = vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0);
-    return step(v_shadowMapUv.z, dot(texture2D(u_shadowTexture, v_shadowMapUv.xy + offset), bitShifts));//+(1.0/255.0));
-}
-
-float getShadow()
-{
-    return (//getShadowness(vec2(0,0)) +
-    getShadowness(vec2(u_shadowPCFOffset, u_shadowPCFOffset)) +
-    getShadowness(vec2(-u_shadowPCFOffset, u_shadowPCFOffset)) +
-    getShadowness(vec2(u_shadowPCFOffset, -u_shadowPCFOffset)) +
-    getShadowness(vec2(-u_shadowPCFOffset, -u_shadowPCFOffset))) * 0.25;
-}
-    #endif //shadowMapFlag
-
     #if defined(ambientFlag) && defined(separateAmbientFlag)
 varying vec3 v_ambientLight;
 #endif //separateAmbientFlag
@@ -128,11 +106,19 @@ uniform int u_numberOfShadowlessLights;
 varying vec3 v_frag_pos;
 uniform float u_screenWidth;
 uniform float u_screenHeight;
+uniform float u_modelWidth;
+uniform float u_modelDepth;
+uniform float u_modelX;
+uniform float u_modelZ;
 uniform int u_numberOfNearbyCharacters;
+uniform int u_floorAmbientOcclusion;
 uniform sampler2D u_shadows;
 
 //
 
+float map(float value, float min1, float max1, float min2, float max2) {
+    return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
+}
 
 void main() {
 
@@ -175,14 +161,7 @@ void main() {
     gl_FragColor.rgb = diffuse.rgb + emissive.rgb;
     #elif (!defined(specularFlag))
     #if defined(ambientFlag) && defined(separateAmbientFlag)
-    #ifdef shadowMapFlag
-    gl_FragColor.rgb = (diffuse.rgb * (v_ambientLight + getShadow() * v_lightDiffuse)) + emissive.rgb;
-    #else
     gl_FragColor.rgb = (diffuse.rgb * (v_ambientLight + v_lightDiffuse)) + emissive.rgb;
-    #endif //shadowMapFlag
-    #else
-    #ifdef shadowMapFlag
-    gl_FragColor.rgb = getShadow() * (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
     #else
     gl_FragColor.rgb = vec3(0.0);
     if (u_affectedByLight != 0.0){
@@ -228,14 +207,18 @@ void main() {
             }
         }
 
-        if ( minDistanceToCharacter < 0.5){
+        if (minDistanceToCharacter < 0.5){
             gl_FragColor.rgb*=0.025+minDistanceToCharacter*1.5+(minDistanceToCharacter*0.5);
         }
 
+        if (u_floorAmbientOcclusion > 0){
+            if ((u_floorAmbientOcclusion & 8) == 8){ // East
+                gl_FragColor.rgb /= map( u_modelX - v_frag_pos.x, 0.0,0.5,0.5, 1.0) * map( u_modelX - v_frag_pos.x, 0.0,0.5,0.5, 1.0);
+            }
+        }
     } else {
         gl_FragColor.rgb = diffuse.rgb;
     }
-    #endif //shadowMapFlag
     #endif
     #else
     #if defined(specularTextureFlag) && defined(specularColorFlag)

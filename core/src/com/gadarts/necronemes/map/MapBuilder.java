@@ -50,7 +50,6 @@ import com.gadarts.necronemes.components.character.CharacterSkillsParameters;
 import com.gadarts.necronemes.components.character.CharacterSoundData;
 import com.gadarts.necronemes.components.character.CharacterSpriteData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
-import com.gadarts.necronemes.components.mi.ModelBoundingBox;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.sd.RelatedDecal;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
@@ -162,11 +161,28 @@ public class MapBuilder implements Disposable {
 	 */
 	public MapGraph inflateTestMap(final String map) {
 		JsonObject mapJsonObj = gson.fromJson(Gdx.files.internal(format(MAP_PATH_TEMP, map)).reader(), JsonObject.class);
-		MapGraph mapGraph = createMapGraph(mapJsonObj);
+		JsonObject tilesJsonObject = mapJsonObj.get(TILES).getAsJsonObject();
+		MapGraph mapGraph = createMapGraph(tilesJsonObject);
+		inflateNodes(tilesJsonObject, mapGraph);
 		inflateHeights(mapJsonObj, mapGraph);
 		inflateAllElements(mapJsonObj, mapGraph);
 		mapGraph.init();
 		return mapGraph;
+	}
+
+	private void inflateNodes(JsonObject tilesJsonObject, MapGraph mapGraph) {
+		String matrix = tilesJsonObject.get(MATRIX).getAsString();
+		byte[] matrixByte = Base64.getDecoder().decode(matrix.getBytes());
+		floorModel.calculateBoundingBox(auxBoundingBox);
+		int width = mapGraph.getWidth();
+		int depth = mapGraph.getDepth();
+		IntStream.range(0, depth).forEach(row ->
+				IntStream.range(0, width).forEach(col -> {
+					byte currentValue = matrixByte[row * width + col % depth];
+					if (currentValue != 0) {
+						inflateNode(row, col, currentValue, mapGraph.getNode(col, row));
+					}
+				}));
 	}
 
 	private MapGraphNode getNodeByJson(final MapGraph mapGraph, final JsonObject tileJsonObject) {
@@ -193,6 +209,49 @@ public class MapBuilder implements Disposable {
 				float height = tileJsonObject.get(HEIGHT).getAsFloat();
 				inflateWalls(tileJsonObject, node, height, mapGraph);
 			});
+		});
+		calculateNodesAmbientOcclusionValue(mapGraph);
+	}
+
+	private void calculateNodesAmbientOcclusionValue(MapGraph mapGraph) {
+		mapGraph.getNodes().forEach(node -> {
+			int row = node.getRow();
+			int col = node.getCol();
+			int nodeAmbientOcclusionValue = 0;
+			int westCol = col - 1;
+			float height = node.getHeight();
+			int eastCol = col + 1;
+			if (row > 0) {
+				int northRow = row - 1;
+				if (col > 0 && mapGraph.getNode(northRow, westCol).getHeight() > height) {
+					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH_WEST;
+				}
+				if (mapGraph.getNode(northRow, col).getHeight() > height) {
+					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH;
+				}
+				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(northRow, eastCol).getHeight() > height) {
+					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH_EAST;
+				}
+			}
+			if (col > 0 && mapGraph.getNode(row, westCol).getHeight() > height) {
+				nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_WEST;
+			}
+			if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(row, eastCol).getHeight() > height) {
+				nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_EAST;
+			}
+			if (row < mapGraph.getDepth() - 1) {
+				int southRow = row + 1;
+				if (col > 0 && mapGraph.getNode(southRow, westCol).getHeight() > height) {
+					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH_WEST;
+				}
+				if (mapGraph.getNode(southRow, col).getHeight() > height) {
+					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH;
+				}
+				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(southRow, eastCol).getHeight() > height) {
+					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH_EAST;
+				}
+			}
+			node.setNodeAmbientOcclusionValue(nodeAmbientOcclusionValue);
 		});
 	}
 
@@ -376,7 +435,7 @@ public class MapBuilder implements Disposable {
 															  final float height) {
 		Models def = type.getModelDefinition();
 		String fileName = BOUNDING_BOX_PREFIX + def.getFilePath();
-		ModelBoundingBox box = assetsManager.get(fileName, ModelBoundingBox.class);
+		BoundingBox box = assetsManager.get(fileName, BoundingBox.class);
 		GameModelInstance modelInstance = new GameModelInstance(assetsManager.getModel(def), box, true, def);
 		Direction direction = Direction.values()[directionIndex];
 		modelInstance.transform.setTranslation(auxVector3_1.set(node.getCol() + 0.5f, 0, node.getRow() + 0.5f));
@@ -469,7 +528,7 @@ public class MapBuilder implements Disposable {
 		Vector3 position = auxVector3_1.set(col + 0.5f, INDEPENDENT_LIGHT_HEIGHT, row + 0.5f);
 		position.add(0, mapGraph.getNode(col, row).getHeight(), 0);
 		EntityBuilder.beginBuildingEntity(engine)
-				.addShadowlessLightComponent(position, INDEPENDENT_LIGHT_INTENSITY, INDEPENDENT_LIGHT_RADIUS)
+				.addStaticLightComponent(position, INDEPENDENT_LIGHT_INTENSITY, INDEPENDENT_LIGHT_RADIUS, Color.WHITE)
 				.finishAndAddToEngine();
 	}
 
@@ -502,7 +561,7 @@ public class MapBuilder implements Disposable {
 		Coords coord = new Coords(pickJsonObject.get(ROW).getAsInt(), pickJsonObject.get(COL).getAsInt());
 		Models modelDefinition = type.getModelDefinition();
 		String fileName = BOUNDING_BOX_PREFIX + modelDefinition.getFilePath();
-		ModelBoundingBox boundingBox = assetsManager.get(fileName, ModelBoundingBox.class);
+		BoundingBox boundingBox = assetsManager.get(fileName, BoundingBox.class);
 		GameModelInstance modelInstance = new GameModelInstance(assetsManager.getModel(modelDefinition), boundingBox);
 		modelInstance.transform.setTranslation(auxVector3_1.set(coord.getCol() + 0.5f, 0, coord.getRow() + 0.5f));
 		modelInstance.transform.translate(0, mapGraph.getNode(coord).getHeight(), 0);
@@ -660,33 +719,18 @@ public class MapBuilder implements Disposable {
 	}
 
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
-		Dimension mapSize = inflateNodes(mapJsonObj.get(TILES).getAsJsonObject());
+		Dimension mapSize = new Dimension(mapJsonObj.get(WIDTH).getAsInt(), mapJsonObj.get(DEPTH).getAsInt());
 		float ambient = GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, MapJsonKeys.AMBIENT, 0);
 		return new MapGraph(mapSize, engine, ambient);
 	}
 
-	private Dimension inflateNodes(final JsonObject tilesJsonObject) {
-		Dimension mapSize = new Dimension(tilesJsonObject.get(WIDTH).getAsInt(), tilesJsonObject.get(DEPTH).getAsInt());
-		String matrix = tilesJsonObject.get(MATRIX).getAsString();
-		byte[] matrixByte = Base64.getDecoder().decode(matrix.getBytes());
-		floorModel.calculateBoundingBox(auxBoundingBox);
-		IntStream.range(0, mapSize.height).forEach(row ->
-				IntStream.range(0, mapSize.width).forEach(col -> {
-					byte currentValue = matrixByte[row * mapSize.width + col % mapSize.width];
-					if (currentValue != 0) {
-						inflateNode(row, col, currentValue);
-					}
-				}));
-		return mapSize;
-	}
-
-	private void inflateNode(final int row, final int col, final byte chr) {
+	private void inflateNode(final int row, final int col, final byte chr, MapGraphNode node) {
 		SurfaceTextures definition = SurfaceTextures.values()[chr - 1];
 		if (definition != MISSING) {
 			GameModelInstance mi = new GameModelInstance(floorModel);
 			defineNode(row, col, definition, mi);
 			beginBuildingEntity(engine).addModelInstanceComponent(mi, true)
-					.addFloorComponent()
+					.addFloorComponent(node)
 					.finishAndAddToEngine();
 		}
 	}

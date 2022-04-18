@@ -9,6 +9,7 @@ import lombok.Getter;
 
 @Getter
 public class GameModelInstance extends ModelInstance {
+
 	private final AdditionalRenderData additionalRenderData;
 	private Assets.Models modelDefinition;
 

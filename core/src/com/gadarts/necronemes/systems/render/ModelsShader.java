@@ -7,7 +7,9 @@ import com.badlogic.gdx.graphics.g3d.Renderable;
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
 import com.gadarts.necronemes.components.ComponentsMapper;
+import com.gadarts.necronemes.components.FloorComponent;
 import com.gadarts.necronemes.components.ShadowlessLightComponent;
 import com.gadarts.necronemes.components.mi.AdditionalRenderData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
@@ -21,15 +23,21 @@ public class ModelsShader extends DefaultShader {
 	private static final String UNIFORM_AFFECTED_BY_LIGHT = "u_affectedByLight";
 	private static final String UNIFORM_NUMBER_OF_NEARBY_CHARACTERS = "u_numberOfNearbyCharacters";
 	private static final String UNIFORM_NEARBY_CHARACTERS_POSITIONS = "u_nearbyCharactersPositions[0]";
+	private static final String UNIFORM_FLOOR_AMBIENT_OCCLUSION = "u_floorAmbientOcclusion";
 	private static final String UNIFORM_NUMBER_OF_SHADOWLESS_LIGHTS = "u_numberOfShadowlessLights";
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_POSITIONS = "u_shadowlessLightsPositions[0]";
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA = "u_shadowlessLightsExtraData[0]";
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_COLORS = "u_shadowlessLightsColors[0]";
+	private static final String UNIFORM_MODEL_WIDTH = "u_modelWidth";
+	private static final String UNIFORM_MODEL_DEPTH = "u_modelDepth";
+	private static final String UNIFORM_MODEL_X = "u_modelX";
+	private static final String UNIFORM_MODEL_Z = "u_modelZ";
 	private static final int MAX_LIGHTS = 16;
 	private final static Vector3 auxVector = new Vector3();
 	private static final int LIGHT_EXTRA_DATA_SIZE = 3;
 	private final static Color auxColor = new Color();
 	private static final int MAX_NEARBY_CHARACTERS = 2;
+	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private final float[] lightsPositions = new float[MAX_LIGHTS * 3];
 	private final float[] lightsExtraData = new float[MAX_LIGHTS * LIGHT_EXTRA_DATA_SIZE];
 	private final float[] lightsColors = new float[MAX_LIGHTS * 3];
@@ -42,6 +50,11 @@ public class ModelsShader extends DefaultShader {
 	private int uniformLocShadowlessLightsExtraData;
 	private int uniformLocShadowlessLightsColors;
 	private int uniformLocNearbyCharactersPositions;
+	private int uniformLocFloorAmbientOcclusion;
+	private int uniformLocModelWidth;
+	private int uniformLocModelDepth;
+	private int uniformLocModelX;
+	private int uniformLocModelZ;
 
 	public ModelsShader(Renderable renderable, Config mainShaderConfig, FrameBuffer shadowFrameBuffer) {
 		super(renderable, mainShaderConfig);
@@ -60,6 +73,11 @@ public class ModelsShader extends DefaultShader {
 		uniformLocAffectedByLight = program.getUniformLocation(UNIFORM_AFFECTED_BY_LIGHT);
 		uniformLocNumberOfNearbyCharacters = program.getUniformLocation(UNIFORM_NUMBER_OF_NEARBY_CHARACTERS);
 		uniformLocNearbyCharactersPositions = program.getUniformLocation(UNIFORM_NEARBY_CHARACTERS_POSITIONS);
+		uniformLocFloorAmbientOcclusion = program.getUniformLocation(UNIFORM_FLOOR_AMBIENT_OCCLUSION);
+		uniformLocModelWidth = program.getUniformLocation(UNIFORM_MODEL_WIDTH);
+		uniformLocModelDepth = program.getUniformLocation(UNIFORM_MODEL_DEPTH);
+		uniformLocModelX = program.getUniformLocation(UNIFORM_MODEL_X);
+		uniformLocModelZ = program.getUniformLocation(UNIFORM_MODEL_Z);
 		uniformLocNumberOfShadowlessLights = program.getUniformLocation(UNIFORM_NUMBER_OF_SHADOWLESS_LIGHTS);
 		uniformLocShadowlessLightsPositions = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_POSITIONS);
 		uniformLocShadowlessLightsExtraData = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA);
@@ -134,26 +152,43 @@ public class ModelsShader extends DefaultShader {
 		Entity userData = (Entity) renderable.userData;
 		GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(userData).getModelInstance();
 		AdditionalRenderData additionalRenderData = modelInstance.getAdditionalRenderData();
-		boolean affectedByLight = additionalRenderData.isAffectedByLight();
 		applyLights(additionalRenderData);
-		program.setUniformf(uniformLocAffectedByLight, affectedByLight ? 1F : 0F);
+		program.setUniformf(uniformLocAffectedByLight, additionalRenderData.isAffectedByLight() ? 1F : 0F);
+		insertModelDimensions(additionalRenderData, userData);
 		renderCharacterShadows(renderable);
 		super.render(renderable);
 	}
 
+	private void insertModelDimensions(AdditionalRenderData additionalRenderData, Entity userData) {
+		float width = additionalRenderData.getBoundingBox(auxBoundingBox).getWidth();
+		float depth = additionalRenderData.getBoundingBox(auxBoundingBox).getDepth();
+		program.setUniformf(uniformLocModelWidth, width);
+		program.setUniformf(uniformLocModelDepth, depth);
+		Vector3 translation = modelInstance.get(userData).getModelInstance().transform.getTranslation(auxVector);
+		program.setUniformf(uniformLocModelX, translation.x);
+		program.setUniformf(uniformLocModelZ, translation.z);
+	}
+
 	private void renderCharacterShadows(Renderable renderable) {
 		if (floor.has((Entity) renderable.userData)) {
-			List<Entity> nearbyCharacters = floor.get((Entity) renderable.userData).getNearbyCharacters();
-			int size = nearbyCharacters.size();
+			FloorComponent floorComponent = floor.get((Entity) renderable.userData);
+			int size = floorComponent.getNearbyCharacters().size();
 			program.setUniformi(uniformLocNumberOfNearbyCharacters, size);
-			for (int i = 0; i < size; i++) {
-				Vector3 position = characterDecal.get(nearbyCharacters.get(i)).getDecal().getPosition();
-				nearbyCharactersPositions[i * 2] = position.x;
-				nearbyCharactersPositions[i * 2 + 1] = position.z;
-			}
+			initializeNearbyCharactersPositions(renderable, size);
 			program.setUniform2fv(uniformLocNearbyCharactersPositions, this.nearbyCharactersPositions, 0, size * 2);
-		}else{
+			program.setUniformi(uniformLocFloorAmbientOcclusion, floorComponent.getNode().getNodeAmbientOcclusionValue());
+		} else {
 			program.setUniformi(uniformLocNumberOfNearbyCharacters, 0);
+			program.setUniformi(uniformLocFloorAmbientOcclusion, 0);
+		}
+	}
+
+	private void initializeNearbyCharactersPositions(Renderable renderable, int size) {
+		for (int i = 0; i < size; i++) {
+			FloorComponent floorComponent = floor.get((Entity) renderable.userData);
+			Vector3 position = characterDecal.get(floorComponent.getNearbyCharacters().get(i)).getDecal().getPosition();
+			nearbyCharactersPositions[i * 2] = position.x;
+			nearbyCharactersPositions[i * 2 + 1] = position.z;
 		}
 	}
 }
