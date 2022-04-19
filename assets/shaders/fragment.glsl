@@ -107,11 +107,14 @@ varying vec3 v_frag_pos;
 uniform float u_screenWidth;
 uniform float u_screenHeight;
 uniform float u_modelWidth;
+uniform float u_modelHeight;
 uniform float u_modelDepth;
 uniform float u_modelX;
+uniform float u_modelY;
 uniform float u_modelZ;
 uniform int u_numberOfNearbyCharacters;
 uniform int u_floorAmbientOcclusion;
+uniform int u_isWall;
 uniform sampler2D u_shadows;
 
 //
@@ -198,27 +201,53 @@ void main() {
         color.rgba *= color.a*5.0;
         gl_FragColor.rgb+=vec3(gl_FragColor.r*color.a,gl_FragColor.g*color.a, gl_FragColor.b*color.a);
 
-        float minDistanceToCharacter = 21390950.0;
+        float minDistToChar = 21390950.0;
         for (int i = 0; i< u_numberOfNearbyCharacters; i++){
             vec2 sub = u_nearbyCharactersPositions[i].xy - v_frag_pos.xz;
             float distance = length(sub);
-            if (distance < minDistanceToCharacter){
-                minDistanceToCharacter = distance;
+            if (distance < minDistToChar){
+                minDistToChar = distance;
             }
         }
 
-        if (minDistanceToCharacter < 0.5){
-            gl_FragColor.rgb*=0.025+minDistanceToCharacter*1.5+(minDistanceToCharacter*0.5);
+        const float SHADOW_RADIUS = 0.25;
+        const float SHADOW_MAX_OPACITY = 0.2;
+        if (minDistToChar < SHADOW_RADIUS){
+            gl_FragColor.rgb*=1.0 - min(SHADOW_MAX_OPACITY, 1.0/(1.0 + minDistToChar));
         }
 
         if (u_floorAmbientOcclusion > 0){
+            const float AO_STRENGTH = 0.25;
+            const float FLOOR_DIAG_AO_STRENGTH = AO_STRENGTH*2.0;
             if ((u_floorAmbientOcclusion & 1) == 1){ // South-East
-                vec2 modelPosition = vec2(u_modelX, u_modelZ);
-                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*0.2;
+                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+            }
+            if ((u_floorAmbientOcclusion & 2) == 2){ // South
+                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.z - u_modelZ, 0.0)*AO_STRENGTH;
+            }
+            if ((u_floorAmbientOcclusion & 4) == 4){ // South-West
+                gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*FLOOR_DIAG_AO_STRENGTH;
             }
             if ((u_floorAmbientOcclusion & 8) == 8){ // East
-                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*0.2;
+                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*AO_STRENGTH;
             }
+            if ((u_floorAmbientOcclusion & 32) == 32){ // West
+                gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*AO_STRENGTH;
+            }
+            if ((u_floorAmbientOcclusion & 64) == 64){ // North-East
+                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(u_modelZ - v_frag_pos.z, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+            }
+            if ((u_floorAmbientOcclusion & 128) == 128){ // North
+                gl_FragColor.rgb *= 1.0 - max(u_modelZ - v_frag_pos.z, 0.0)*AO_STRENGTH;
+            }
+            if ((u_floorAmbientOcclusion & 256) == 256){ // North-West
+                gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*max(u_modelZ - v_frag_pos.z, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+            }
+        } else if (u_isWall == 1){
+            const float WALL_AO_MAX_HEIGHT = 0.5;
+            const float WALL_AO_STRENGTH = 0.55;
+            gl_FragColor.rgb *= 1.0 - max(WALL_AO_MAX_HEIGHT - v_frag_pos.y - u_modelY,0.0)*WALL_AO_STRENGTH;
+            gl_FragColor.rgb *= 1.0 - max(WALL_AO_MAX_HEIGHT - (u_modelHeight - v_frag_pos.y),0.0)*WALL_AO_STRENGTH;
         }
     } else {
         gl_FragColor.rgb = diffuse.rgb;
