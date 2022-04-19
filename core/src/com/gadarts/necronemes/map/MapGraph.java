@@ -148,7 +148,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	}
 
 	public MapGraphNode getNode(final int col, final int row) {
-		int index = Math.max(Math.min(row, mapSize.height) * mapSize.width + Math.min(col, mapSize.width), 0);
+		int index = Math.max(Math.min(row, mapSize.height) * mapSize.width + Math.min(col, mapSize.width-1), 0);
 		MapGraphNode result = null;
 		if (index < getWidth() * getDepth()) {
 			result = nodes.get(index);

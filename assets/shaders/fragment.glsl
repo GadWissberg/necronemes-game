@@ -212,8 +212,12 @@ void main() {
         }
 
         if (u_floorAmbientOcclusion > 0){
+            if ((u_floorAmbientOcclusion & 1) == 1){ // South-East
+                vec2 modelPosition = vec2(u_modelX, u_modelZ);
+                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*0.2;
+            }
             if ((u_floorAmbientOcclusion & 8) == 8){ // East
-                gl_FragColor.rgb /= map( u_modelX - v_frag_pos.x, 0.0,0.5,0.5, 1.0) * map( u_modelX - v_frag_pos.x, 0.0,0.5,0.5, 1.0);
+                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*0.2;
             }
         }
     } else {

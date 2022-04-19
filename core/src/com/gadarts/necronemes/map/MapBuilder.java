@@ -162,7 +162,7 @@ public class MapBuilder implements Disposable {
 	public MapGraph inflateTestMap(final String map) {
 		JsonObject mapJsonObj = gson.fromJson(Gdx.files.internal(format(MAP_PATH_TEMP, map)).reader(), JsonObject.class);
 		JsonObject tilesJsonObject = mapJsonObj.get(TILES).getAsJsonObject();
-		MapGraph mapGraph = createMapGraph(tilesJsonObject);
+		MapGraph mapGraph = createMapGraph(mapJsonObj);
 		inflateNodes(tilesJsonObject, mapGraph);
 		inflateHeights(mapJsonObj, mapGraph);
 		inflateAllElements(mapJsonObj, mapGraph);
@@ -223,31 +223,31 @@ public class MapBuilder implements Disposable {
 			int eastCol = col + 1;
 			if (row > 0) {
 				int northRow = row - 1;
-				if (col > 0 && mapGraph.getNode(northRow, westCol).getHeight() > height) {
+				if (col > 0 && mapGraph.getNode(westCol,northRow).getHeight() > height) {
 					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH_WEST;
 				}
-				if (mapGraph.getNode(northRow, col).getHeight() > height) {
+				if (mapGraph.getNode(col, northRow).getHeight() > height) {
 					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH;
 				}
-				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(northRow, eastCol).getHeight() > height) {
+				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(eastCol, northRow).getHeight() > height) {
 					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH_EAST;
 				}
 			}
-			if (col > 0 && mapGraph.getNode(row, westCol).getHeight() > height) {
+			if (col > 0 && mapGraph.getNode(westCol, row).getHeight() > height) {
 				nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_WEST;
 			}
-			if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(row, eastCol).getHeight() > height) {
+			if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(eastCol, row).getHeight() > height) {
 				nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_EAST;
 			}
 			if (row < mapGraph.getDepth() - 1) {
 				int southRow = row + 1;
-				if (col > 0 && mapGraph.getNode(southRow, westCol).getHeight() > height) {
+				if (col > 0 && mapGraph.getNode(westCol,southRow).getHeight() > height) {
 					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH_WEST;
 				}
-				if (mapGraph.getNode(southRow, col).getHeight() > height) {
+				if (mapGraph.getNode(col, southRow).getHeight() > height) {
 					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH;
 				}
-				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(southRow, eastCol).getHeight() > height) {
+				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(eastCol, southRow).getHeight() > height) {
 					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH_EAST;
 				}
 			}
@@ -719,7 +719,8 @@ public class MapBuilder implements Disposable {
 	}
 
 	private MapGraph createMapGraph(final JsonObject mapJsonObj) {
-		Dimension mapSize = new Dimension(mapJsonObj.get(WIDTH).getAsInt(), mapJsonObj.get(DEPTH).getAsInt());
+		JsonObject tilesJsonObject = mapJsonObj.get(TILES).getAsJsonObject();
+		Dimension mapSize = new Dimension(tilesJsonObject.get(WIDTH).getAsInt(), tilesJsonObject.get(DEPTH).getAsInt());
 		float ambient = GeneralUtils.getFloatFromJsonOrDefault(mapJsonObj, MapJsonKeys.AMBIENT, 0);
 		return new MapGraph(mapSize, engine, ambient);
 	}
