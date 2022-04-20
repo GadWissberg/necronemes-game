@@ -1,8 +1,10 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.window;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.ui.storage.ItemSelectionHandler;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
 import lombok.Data;
 
 import java.util.List;

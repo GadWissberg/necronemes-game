@@ -1,7 +1,11 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEventType;
+import com.gadarts.necronemes.systems.ui.window.OnEvent;
+import com.gadarts.necronemes.systems.ui.window.WindowEventParameters;
 
 import java.util.List;
 

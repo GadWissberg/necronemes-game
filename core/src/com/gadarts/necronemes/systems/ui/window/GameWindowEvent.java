@@ -1,7 +1,6 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.window;
 
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.Event;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import lombok.Getter;
 import lombok.Setter;

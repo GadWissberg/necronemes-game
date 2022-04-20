@@ -29,6 +29,7 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.turns.TurnsSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.ui.menu.MenuHandlerImpl;
 import com.gadarts.necronemes.utils.EntityBuilder;
 
 import java.util.List;

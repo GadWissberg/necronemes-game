@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import lombok.Getter;
 import lombok.Setter;

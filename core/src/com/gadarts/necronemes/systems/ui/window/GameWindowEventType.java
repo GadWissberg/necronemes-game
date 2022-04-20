@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.window;
 
 public enum GameWindowEventType {
 	WINDOW_CLOSED,

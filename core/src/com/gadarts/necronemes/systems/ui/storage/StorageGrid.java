@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -18,6 +18,8 @@ import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.player.PlayerStorage;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEvent;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEventType;
 import com.gadarts.necronemes.utils.GeneralUtils;
 
 import java.util.Optional;

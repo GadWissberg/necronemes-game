@@ -1,6 +1,8 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEvent;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEventType;
 
 public abstract class ItemsTable extends Table {
 	protected final ItemSelectionHandler itemSelectionHandler;

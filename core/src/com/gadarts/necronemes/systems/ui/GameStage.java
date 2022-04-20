@@ -14,6 +14,10 @@ import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.ui.storage.StorageWindow;
+import com.gadarts.necronemes.systems.ui.window.GameWindow;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEvent;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEventType;
 
 import java.util.ArrayList;
 import java.util.List;

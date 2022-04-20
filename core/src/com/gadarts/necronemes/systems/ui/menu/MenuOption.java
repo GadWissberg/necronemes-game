@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.menu;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necronemes.SoundPlayer;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
 
 import java.util.List;
 

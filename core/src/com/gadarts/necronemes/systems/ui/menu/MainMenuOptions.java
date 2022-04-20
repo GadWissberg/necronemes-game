@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.menu;
 
 import com.badlogic.gdx.Gdx;
 import com.gadarts.necronemes.components.ComponentsMapper;

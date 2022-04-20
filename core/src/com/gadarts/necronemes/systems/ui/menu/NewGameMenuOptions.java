@@ -1,5 +1,6 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.menu;
 
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 

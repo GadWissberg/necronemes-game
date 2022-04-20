@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -14,6 +14,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necronemes.components.player.Item;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEvent;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEventType;
 import lombok.Getter;
 import lombok.Setter;
 

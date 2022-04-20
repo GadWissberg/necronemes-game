@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
@@ -12,6 +12,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.components.player.Weapon;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEvent;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEventType;
 import lombok.Getter;
 
 import java.util.List;

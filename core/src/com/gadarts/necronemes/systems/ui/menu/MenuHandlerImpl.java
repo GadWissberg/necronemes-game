@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.menu;
 
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -10,6 +10,8 @@ import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.Necronemes;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.ui.GameStage;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
 import lombok.Getter;
 
 import java.util.Arrays;
@@ -46,10 +48,10 @@ public class MenuHandlerImpl implements MenuHandler {
 		return new Label(Necronemes.TITLE, logoStyle);
 	}
 
-	void addMenuTable(Table table,
-					  GameAssetsManager assetsManager,
-					  SystemsCommonData systemsCommonData,
-					  SoundPlayer soundPlayer) {
+	public void addMenuTable(Table table,
+							 GameAssetsManager assetsManager,
+							 SystemsCommonData systemsCommonData,
+							 SoundPlayer soundPlayer) {
 		menuTable = table;
 		menuTable.setName(TABLE_NAME_MENU);
 		menuTable.add(createLogo(assetsManager)).row();

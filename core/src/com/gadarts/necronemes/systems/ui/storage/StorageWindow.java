@@ -1,4 +1,4 @@
-package com.gadarts.necronemes.systems.ui;
+package com.gadarts.necronemes.systems.ui.storage;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -19,15 +19,19 @@ import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.components.player.Weapon;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.ui.window.GameWindow;
+import com.gadarts.necronemes.systems.ui.window.GameWindowEvent;
+import com.gadarts.necronemes.systems.ui.window.WindowEventParameters;
 import lombok.AccessLevel;
 import lombok.Getter;
 
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static com.gadarts.necronemes.systems.ui.StorageGrid.GRID_CELL_SIZE;
-import static com.gadarts.necronemes.systems.ui.StorageGrid.GRID_SIZE;
-import static com.gadarts.necronemes.systems.ui.StorageWindowOnEvents.*;
+import static com.gadarts.necronemes.systems.ui.storage.StorageGrid.GRID_CELL_SIZE;
+import static com.gadarts.necronemes.systems.ui.storage.StorageGrid.GRID_SIZE;
+import static com.gadarts.necronemes.systems.ui.storage.StorageWindowOnEvents.*;
 
 /**
  * The player's storage management GUI.
