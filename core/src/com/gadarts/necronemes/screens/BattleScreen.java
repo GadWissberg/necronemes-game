@@ -2,12 +2,13 @@ package com.gadarts.necronemes.screens;
 
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.Screen;
+import com.gadarts.necronemes.GeneralHandler;
 
 public class BattleScreen implements Screen {
-	private final PooledEngine engine;
+	private final GeneralHandler generalHandler;
 
-	public BattleScreen(PooledEngine engine) {
-		this.engine = engine;
+	public BattleScreen(GeneralHandler generalHandler) {
+		this.generalHandler = generalHandler;
 	}
 
 	@Override
@@ -17,7 +18,7 @@ public class BattleScreen implements Screen {
 
 	@Override
 	public void render(float delta) {
-		engine.update(delta);
+		generalHandler.update(delta);
 	}
 
 	@Override
@@ -42,6 +43,5 @@ public class BattleScreen implements Screen {
 
 	@Override
 	public void dispose( ) {
-
 	}
 }

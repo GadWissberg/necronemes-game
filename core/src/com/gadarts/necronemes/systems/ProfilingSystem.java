@@ -45,6 +45,14 @@ public class ProfilingSystem extends GameSystem<SystemEventsSubscriber> {
 		setGlProfiler();
 	}
 
+	/**
+	 * Resets the GLProfiler.
+	 */
+	@Override
+	public void reset() {
+		glProfiler.reset();
+	}
+
 	private Label addLabel(BitmapFont font) {
 		final Label label;
 		label = new Label(stringBuilder, new Label.LabelStyle(font, Color.WHITE));

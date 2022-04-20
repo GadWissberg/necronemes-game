@@ -39,12 +39,12 @@ import static com.gadarts.necronemes.Necronemes.FULL_SCREEN_RESOLUTION_HEIGHT;
 import static com.gadarts.necronemes.Necronemes.FULL_SCREEN_RESOLUTION_WIDTH;
 import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_HEIGHT;
 import static com.gadarts.necronemes.Necronemes.WINDOWED_RESOLUTION_WIDTH;
+import static com.gadarts.necronemes.systems.SystemsCommonData.TABLE_NAME_HUD;
 
 public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSubscriber> implements
 		InputSystemEventsSubscriber,
 		TurnsSystemEventsSubscriber,
 		PlayerSystemEventsSubscriber {
-	static final String TABLE_NAME_HUD = "hud";
 	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private static final Vector3 auxVector3_2 = new Vector3();
 	private static final String BUTTON_NAME_STORAGE = "button_storage";
@@ -52,6 +52,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	private final SoundPlayer soundPlayer;
 	private final boolean showBorders = DefaultGameSettings.DISPLAY_HUD_OUTLINES;
 	private final AttackNodesHandler attackNodesHandler = new AttackNodesHandler();
+	private final MenuHandlerImpl menuHandlerImpl;
 	private CursorHandler cursorHandler;
 
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
@@ -63,6 +64,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		Table hudTable = addTable();
 		hudTable.setName(TABLE_NAME_HUD);
 		addStorageButton(hudTable);
+		menuHandlerImpl = new MenuHandlerImpl(systemsCommonData.getUiStage(), getSubscribers());
 	}
 
 	@Override
@@ -140,7 +142,6 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		}
 	}
 
-
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
@@ -149,17 +150,19 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	}
 
 	@Override
-	public Class<UserInterfaceSystemEventsSubscriber> getEventsSubscriberClass( ) {
+	public Class<UserInterfaceSystemEventsSubscriber> getEventsSubscriberClass() {
 		return UserInterfaceSystemEventsSubscriber.class;
 	}
 
 	@Override
-	public void initializeData( ) {
+	public void initializeData() {
 		getSystemsCommonData().setCursor(createAndAdd3dCursor());
 		cursorHandler = new CursorHandler(getSystemsCommonData());
 		cursorHandler.init();
 		attackNodesHandler.init(getEngine());
+		menuHandlerImpl.addMenuTable(addTable(), getAssetsManager(), getSystemsCommonData(), soundPlayer);
 	}
+
 
 	@Override
 	public void touchDown(final int screenX, final int screenY, final int button) {
@@ -169,7 +172,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		}
 	}
 
-	private void onUserSelectedNodeToApplyTurn( ) {
+	private void onUserSelectedNodeToApplyTurn() {
 		MapGraphNode cursorNode = cursorHandler.getCursorNode();
 		for (UserInterfaceSystemEventsSubscriber sub : subscribers) {
 			sub.onUserSelectedNodeToApplyTurn(cursorNode, attackNodesHandler);

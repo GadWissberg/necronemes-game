@@ -6,8 +6,7 @@ import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.SystemEventsSubscriber;
 
 public interface UserInterfaceSystemEventsSubscriber extends SystemEventsSubscriber {
-
-	default void itemAddedToStorage(Item item) {
+	default void onMenuToggled(boolean active) {
 
 	}
 
@@ -19,4 +18,7 @@ public interface UserInterfaceSystemEventsSubscriber extends SystemEventsSubscri
 
 	}
 
+	default void onNewGameSelectedInMenu() {
+		
+	}
 }

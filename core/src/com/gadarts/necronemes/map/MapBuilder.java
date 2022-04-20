@@ -130,11 +130,11 @@ public class MapBuilder implements Disposable {
 	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final Vector2 auxVector2_2 = new Vector2();
 	private final Model floorModel;
-	private final PooledEngine engine;
 	private final GameAssetsManager assetsManager;
 	private final Gson gson = new Gson();
 	private final WallCreator wallCreator;
 	private final Map<Enemies, Animation<TextureAtlas.AtlasRegion>> enemyBulletsTextureRegions = new HashMap<>();
+	private PooledEngine engine;
 
 	public MapBuilder(PooledEngine engine, GameAssetsManager assetsManager) {
 		this.engine = engine;
@@ -761,7 +761,14 @@ public class MapBuilder implements Disposable {
 	}
 
 	@Override
-	public void dispose( ) {
+	public void dispose() {
 		floorModel.dispose();
+	}
+
+	/**
+	 * @param engine Destroys the current engine and replaces with the given one
+	 */
+	public void reset(final PooledEngine engine) {
+		this.engine = engine;
 	}
 }

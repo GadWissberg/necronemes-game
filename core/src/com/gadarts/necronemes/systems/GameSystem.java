@@ -19,13 +19,17 @@ public abstract class GameSystem<T extends SystemEventsSubscriber> extends Entit
 	private final SoundPlayer soundPlayer;
 	private final GameAssetsManager assetsManager;
 
-	public GameSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
+	protected GameSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
 		this.systemsCommonData = systemsCommonData;
 		this.soundPlayer = soundPlayer;
 		this.assetsManager = assetsManager;
 	}
 
-	public abstract Class<T> getEventsSubscriberClass( );
+	public void reset() {
+
+	}
+
+	public abstract Class<T> getEventsSubscriberClass();
 
 	@Override
 	public void subscribeForEvents(final T sub) {
@@ -33,5 +37,5 @@ public abstract class GameSystem<T extends SystemEventsSubscriber> extends Entit
 		subscribers.add(sub);
 	}
 
-	public abstract void initializeData( );
+	public abstract void initializeData();
 }

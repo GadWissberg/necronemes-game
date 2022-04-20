@@ -15,6 +15,7 @@ import lombok.Setter;
 @Getter
 public class SystemsCommonData {
 	public static final int CAMERA_LIGHT_FAR = 10;
+	public static final String TABLE_NAME_HUD = "hud";
 
 	@Setter(AccessLevel.NONE)
 	private final String versionName;

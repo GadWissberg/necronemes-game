@@ -18,6 +18,12 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 	}
 
 	@Override
+	public void reset() {
+		InputMultiplexer inputMultiplexer = (InputMultiplexer) Gdx.input.getInputProcessor();
+		inputMultiplexer.clear();
+	}
+
+	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
 		if (debugInput != null) {
@@ -26,7 +32,7 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 	}
 
 	@Override
-	public Class<InputSystemEventsSubscriber> getEventsSubscriberClass( ) {
+	public Class<InputSystemEventsSubscriber> getEventsSubscriberClass() {
 		return InputSystemEventsSubscriber.class;
 	}
 
