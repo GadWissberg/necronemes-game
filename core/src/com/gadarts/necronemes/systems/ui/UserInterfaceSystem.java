@@ -19,6 +19,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.player.Item;
@@ -29,8 +30,10 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.player.PlayerSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.turns.TurnsSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.ui.menu.MenuHandler;
 import com.gadarts.necronemes.systems.ui.menu.MenuHandlerImpl;
 import com.gadarts.necronemes.utils.EntityBuilder;
+import lombok.Getter;
 
 import java.util.List;
 
@@ -53,19 +56,21 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	private final SoundPlayer soundPlayer;
 	private final boolean showBorders = DefaultGameSettings.DISPLAY_HUD_OUTLINES;
 	private final AttackNodesHandler attackNodesHandler = new AttackNodesHandler();
-	private final MenuHandlerImpl menuHandlerImpl;
+
+	@Getter
+	private MenuHandler menuHandler;
 	private CursorHandler cursorHandler;
 
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
 							   SoundPlayer soundPlayer,
-							   GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+							   GameAssetsManager assetsManager,
+							   GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 		this.soundPlayer = soundPlayer;
 		createUiStage();
 		Table hudTable = addTable();
 		hudTable.setName(TABLE_NAME_HUD);
 		addStorageButton(hudTable);
-		menuHandlerImpl = new MenuHandlerImpl(systemsCommonData.getUiStage(), getSubscribers());
 	}
 
 	@Override
@@ -134,6 +139,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 
 	@Override
 	public void mouseMoved(final int screenX, final int screenY) {
+		if (getSystemsCommonData().getMenuTable().isVisible()) return;
 		MapGraph map = getSystemsCommonData().getMap();
 		MapGraphNode newNode = map.getRayNode(screenX, screenY, getSystemsCommonData().getCamera());
 		ModelInstance cursorModelInstance = cursorHandler.getCursorModelInstance();
@@ -151,29 +157,45 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	}
 
 	@Override
-	public Class<UserInterfaceSystemEventsSubscriber> getEventsSubscriberClass() {
+	public Class<UserInterfaceSystemEventsSubscriber> getEventsSubscriberClass( ) {
 		return UserInterfaceSystemEventsSubscriber.class;
 	}
 
 	@Override
-	public void initializeData() {
+	public void initializeData( ) {
 		getSystemsCommonData().setCursor(createAndAdd3dCursor());
 		cursorHandler = new CursorHandler(getSystemsCommonData());
 		cursorHandler.init();
 		attackNodesHandler.init(getEngine());
-		menuHandlerImpl.addMenuTable(addTable(), getAssetsManager(), getSystemsCommonData(), soundPlayer);
+		menuHandler = new MenuHandlerImpl(getSystemsCommonData(), getSubscribers(), getAssetsManager(), getSoundPlayer());
+		menuHandler.init(addTable(), getAssetsManager(), getSystemsCommonData(), getSoundPlayer());
 	}
 
 
 	@Override
 	public void touchDown(final int screenX, final int screenY, final int button) {
-		if (getSystemsCommonData().isCameraIsRotating() || getSystemsCommonData().getUiStage().hasOpenWindows()) return;
+		if (isTouchDisabled()) return;
 		if (button == Input.Buttons.LEFT && getSystemsCommonData().getCurrentCommand() == null) {
 			onUserSelectedNodeToApplyTurn();
 		}
 	}
 
-	private void onUserSelectedNodeToApplyTurn() {
+	@Override
+	public void keyDown(int keycode) {
+		if (keycode == Input.Keys.ESCAPE) {
+			Table menuTable = getSystemsCommonData().getMenuTable();
+			menuHandler.toggleMenu(!menuTable.isVisible());
+		}
+	}
+
+	private boolean isTouchDisabled( ) {
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		return systemsCommonData.isCameraIsRotating()
+				|| systemsCommonData.getUiStage().hasOpenWindows()
+				|| systemsCommonData.getMenuTable().isVisible();
+	}
+
+	private void onUserSelectedNodeToApplyTurn( ) {
 		MapGraphNode cursorNode = cursorHandler.getCursorNode();
 		for (UserInterfaceSystemEventsSubscriber sub : subscribers) {
 			sub.onUserSelectedNodeToApplyTurn(cursorNode, attackNodesHandler);

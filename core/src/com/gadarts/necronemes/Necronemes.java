@@ -14,7 +14,7 @@ public class Necronemes extends Game {
 	private final String versionName;
 	private final int versionNumber;
 	private final GeneralHandler generalHandler;
-	
+
 	public Necronemes(String versionName, int versionNumber) {
 		this.versionName = versionName;
 		this.versionNumber = versionNumber;
@@ -25,23 +25,8 @@ public class Necronemes extends Game {
 	public void create( ) {
 		Gdx.app.setLogLevel(DefaultGameSettings.LOG_LEVEL);
 		generalHandler.init(versionName, versionNumber);
-		generalHandler.startNewGame("mastaba");
 		setScreen(new BattleScreen(generalHandler));
 	}
-
-	
-
-	
-	
-
-
-	
-
-	
-
-	
-
-	
 
 	@Override
 	public void dispose( ) {

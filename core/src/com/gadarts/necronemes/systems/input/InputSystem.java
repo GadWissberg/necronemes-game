@@ -6,6 +6,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
@@ -13,12 +14,15 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 public class InputSystem extends GameSystem<InputSystemEventsSubscriber> implements InputProcessor {
 	private CameraInputController debugInput;
 
-	public InputSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public InputSystem(SystemsCommonData systemsCommonData,
+					   SoundPlayer soundPlayer,
+					   GameAssetsManager assetsManager,
+					   GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
 
 	@Override
-	public void reset() {
+	public void reset( ) {
 		InputMultiplexer inputMultiplexer = (InputMultiplexer) Gdx.input.getInputProcessor();
 		inputMultiplexer.clear();
 	}
@@ -32,7 +36,7 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 	}
 
 	@Override
-	public Class<InputSystemEventsSubscriber> getEventsSubscriberClass() {
+	public Class<InputSystemEventsSubscriber> getEventsSubscriberClass( ) {
 		return InputSystemEventsSubscriber.class;
 	}
 

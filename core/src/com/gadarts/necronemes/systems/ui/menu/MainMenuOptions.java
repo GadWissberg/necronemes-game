@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public enum MainMenuOptions implements MenuOptionDefinition {
 	CONTINUE("Continue",
-			(menuHandler, generalHandler) -> menuHandler.toggleMenu(false),
+			(menuHandler, userInterfaceSystemEventsSubscribers) -> menuHandler.toggleMenu(false),
 			player -> !ComponentsMapper.player.get(player).isDisabled()),
 	NEW("New Game", NewGameMenuOptions.values()),
 	LOAD("Load Game"),

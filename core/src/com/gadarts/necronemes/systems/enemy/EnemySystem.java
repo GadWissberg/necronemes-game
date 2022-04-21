@@ -16,6 +16,7 @@ import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.attributes.Accuracy;
 import com.gadarts.necromine.model.characters.attributes.Range;
 import com.gadarts.necromine.model.characters.enemies.Enemies;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.FlowerSkillIconComponent;
@@ -81,8 +82,11 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 	private ImmutableArray<Entity> icons;
 	private long nextAmbSoundTime;
 
-	public EnemySystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public EnemySystem(SystemsCommonData systemsCommonData,
+					   SoundPlayer soundPlayer,
+					   GameAssetsManager assetsManager,
+					   GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 		skillFlowerTexture = new TextureRegion(assetsManager.getTexture(UiTextures.SKILL_FLOWER_CENTER));
 		iconSpottedTexture = assetsManager.getTexture(UiTextures.ICON_SPOTTED);
 		enemyPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());

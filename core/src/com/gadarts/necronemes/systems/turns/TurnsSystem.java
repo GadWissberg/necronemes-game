@@ -2,6 +2,7 @@ package com.gadarts.necronemes.systems.turns;
 
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
@@ -15,8 +16,11 @@ public class TurnsSystem extends GameSystem<TurnsSystemEventsSubscriber> impleme
 	private Turns currentTurn;
 	private boolean enemyTurnDone;
 
-	public TurnsSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public TurnsSystem(SystemsCommonData systemsCommonData,
+					   SoundPlayer soundPlayer,
+					   GameAssetsManager assetsManager,
+					   GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 		currentTurn = Turns.PLAYER;
 	}
 

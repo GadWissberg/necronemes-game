@@ -12,7 +12,6 @@ import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.ui.GameStage;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
-import lombok.Getter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -20,50 +19,32 @@ import java.util.List;
 import static com.gadarts.necronemes.systems.SystemsCommonData.TABLE_NAME_HUD;
 
 
-@Getter
 public class MenuHandlerImpl implements MenuHandler {
 	private static final String TABLE_NAME_MENU = "menu";
-	private final GameStage uiStage;
-	private final List<UserInterfaceSystemEventsSubscriber> subscribers;
-	private Table menuTable;
 
-	public MenuHandlerImpl(GameStage uiStage, List<UserInterfaceSystemEventsSubscriber> subscribers) {
-		this.uiStage = uiStage;
+	private final SystemsCommonData systemsCommonData;
+
+	private final List<UserInterfaceSystemEventsSubscriber> subscribers;
+	private final GameAssetsManager assetsManager;
+	private final SoundPlayer soundPlayer;
+
+	public MenuHandlerImpl(SystemsCommonData systemsCommonData,
+						   List<UserInterfaceSystemEventsSubscriber> subscribers,
+						   GameAssetsManager assetsManager, SoundPlayer soundPlayer) {
+		this.systemsCommonData = systemsCommonData;
 		this.subscribers = subscribers;
+		this.assetsManager = assetsManager;
+		this.soundPlayer = soundPlayer;
 	}
 
 	public void toggleMenu(final boolean active) {
-		toggleMenu(active, uiStage);
+		toggleMenu(active, systemsCommonData.getUiStage());
 		subscribers.forEach(subscriber -> subscriber.onMenuToggled(active));
 	}
 
 	@Override
 	public void applyMenuOptions(MenuOptionDefinition[] options) {
-		
-	}
-
-	private Label createLogo(GameAssetsManager assetsManager) {
-		BitmapFont largeFont = assetsManager.getFont(Assets.Fonts.CHUBGOTHIC_LARGE);
-		Label.LabelStyle logoStyle = new Label.LabelStyle(largeFont, MenuOption.FONT_COLOR_REGULAR);
-		return new Label(Necronemes.TITLE, logoStyle);
-	}
-
-	public void addMenuTable(Table table,
-							 GameAssetsManager assetsManager,
-							 SystemsCommonData systemsCommonData,
-							 SoundPlayer soundPlayer) {
-		menuTable = table;
-		menuTable.setName(TABLE_NAME_MENU);
-		menuTable.add(createLogo(assetsManager)).row();
-		applyMenuOptions(MainMenuOptions.values(), assetsManager, systemsCommonData, soundPlayer);
-		menuTable.toFront();
-		toggleMenu(DefaultGameSettings.MENU_ON_STARTUP);
-	}
-
-	public void applyMenuOptions(MenuOptionDefinition[] options,
-								 GameAssetsManager assetsManager,
-								 SystemsCommonData systemsCommonData,
-								 SoundPlayer soundPlayer) {
+		Table menuTable = systemsCommonData.getMenuTable();
 		menuTable.clear();
 		BitmapFont smallFont = assetsManager.getFont(Assets.Fonts.CHUBGOTHIC_SMALL);
 		Label.LabelStyle style = new Label.LabelStyle(smallFont, MenuOption.FONT_COLOR_REGULAR);
@@ -74,8 +55,48 @@ public class MenuHandlerImpl implements MenuHandler {
 		});
 	}
 
+	@Override
+	public void init(Table table,
+					 GameAssetsManager assetsManager,
+					 SystemsCommonData systemsCommonData,
+					 SoundPlayer soundPlayer) {
+		addMenuTable(table, assetsManager, systemsCommonData, soundPlayer);
+	}
+
+	private Label createLogo(GameAssetsManager assetsManager) {
+		BitmapFont largeFont = assetsManager.getFont(Assets.Fonts.CHUBGOTHIC_LARGE);
+		Label.LabelStyle logoStyle = new Label.LabelStyle(largeFont, MenuOption.FONT_COLOR_REGULAR);
+		return new Label(Necronemes.TITLE, logoStyle);
+	}
+
+	private void addMenuTable(Table table,
+							  GameAssetsManager assetsManager,
+							  SystemsCommonData systemsCommonData,
+							  SoundPlayer soundPlayer) {
+		systemsCommonData.setMenuTable(table);
+		table.setName(TABLE_NAME_MENU);
+		table.add(createLogo(assetsManager)).row();
+		applyMenuOptions(MainMenuOptions.values(), assetsManager, systemsCommonData, soundPlayer);
+		table.toFront();
+		toggleMenu(DefaultGameSettings.MENU_ON_STARTUP);
+	}
+
+	public void applyMenuOptions(MenuOptionDefinition[] options,
+								 GameAssetsManager assetsManager,
+								 SystemsCommonData commonData,
+								 SoundPlayer soundPlayer) {
+		commonData.getMenuTable().clear();
+		BitmapFont smallFont = assetsManager.getFont(Assets.Fonts.CHUBGOTHIC_SMALL);
+		Label.LabelStyle style = new Label.LabelStyle(smallFont, MenuOption.FONT_COLOR_REGULAR);
+		Arrays.stream(options).forEach(o -> {
+			if (o.getValidation().validate(commonData.getPlayer())) {
+				commonData.getMenuTable().add(new MenuOption(o, style, soundPlayer, this, subscribers)).row();
+			}
+		});
+	}
+
 	public void toggleMenu(final boolean active, final GameStage stage) {
-		getMenuTable().setVisible(active);
+		systemsCommonData.getMenuTable().setVisible(active);
 		stage.getRoot().findActor(TABLE_NAME_HUD).setTouchable(active ? Touchable.disabled : Touchable.enabled);
 	}
 }

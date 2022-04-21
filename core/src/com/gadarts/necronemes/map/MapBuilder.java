@@ -763,6 +763,7 @@ public class MapBuilder implements Disposable {
 	@Override
 	public void dispose() {
 		floorModel.dispose();
+		wallCreator.dispose();
 	}
 
 	/**

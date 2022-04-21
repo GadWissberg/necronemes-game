@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.particles.emitters.RegularEmitter;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Array;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.ParticleComponent;
@@ -29,8 +30,9 @@ public class ParticleEffectsSystem extends GameSystem<SystemEventsSubscriber> {
 
 	public ParticleEffectsSystem(SystemsCommonData systemsCommonData,
 								 SoundPlayer soundPlayer,
-								 GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+								 GameAssetsManager assetsManager,
+								 GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 		if (pointSpriteBatch == null) {
 			pointSpriteBatch = new PointSpriteParticleBatch();
 		}

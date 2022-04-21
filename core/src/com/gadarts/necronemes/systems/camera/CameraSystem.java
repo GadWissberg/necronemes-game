@@ -2,15 +2,18 @@ package com.gadarts.necronemes.systems.camera;
 
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g3d.decals.Decal;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.GeneralUtils;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.map.MapGraph;
@@ -32,11 +35,16 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
 	private static final Vector3 auxVector3_3 = new Vector3();
+	private static final float MENU_CAMERA_ROTATION = 0.1F;
+	private static final Vector2 auxVector2_1 = new Vector2();
 	private final Vector2 lastMousePosition = new Vector2();
 	private final Vector2 lastRightPressMousePosition = new Vector2();
 
-	public CameraSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public CameraSystem(SystemsCommonData systemsCommonData,
+						SoundPlayer soundPlayer,
+						GameAssetsManager assetsManager,
+						GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
 
 	@Override
@@ -53,10 +61,29 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
-		if (!DEBUG_INPUT && !getSystemsCommonData().getUiStage().hasOpenWindows() && !getSystemsCommonData().isCameraIsRotating()) {
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		if (shouldCameraFollow()) {
 			handleCameraFollow();
 		}
-		getSystemsCommonData().getCamera().update();
+		handleMenuRotation();
+		systemsCommonData.getCamera().update();
+	}
+
+	private void handleMenuRotation( ) {
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		Entity player = systemsCommonData.getPlayer();
+		if (ComponentsMapper.player.get(player).isDisabled()) {
+			Decal decal = ComponentsMapper.characterDecal.get(player).getDecal();
+			systemsCommonData.getCamera().rotateAround(decal.getPosition(), Vector3.Y, MENU_CAMERA_ROTATION);
+		}
+	}
+
+	private boolean shouldCameraFollow( ) {
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		return !DEBUG_INPUT
+				&& !systemsCommonData.getUiStage().hasOpenWindows()
+				&& !systemsCommonData.isCameraIsRotating()
+				&& !systemsCommonData.getMenuTable().isVisible();
 	}
 
 	private void handleCameraFollow( ) {
@@ -71,7 +98,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 
 	@Override
 	public void touchDragged(final int screenX, final int screenY) {
-		if (getSystemsCommonData().isCameraIsRotating()) {
+		if (getSystemsCommonData().isCameraIsRotating() && !getSystemsCommonData().getMenuTable().isVisible()) {
 			Entity player = getSystemsCommonData().getPlayer();
 			Vector3 rotationPoint = ComponentsMapper.characterDecal.get(player).getDecal().getPosition();
 			Camera camera = getSystemsCommonData().getCamera();
@@ -83,7 +110,7 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 
 	@Override
 	public void touchDown(final int screenX, final int screenY, final int button) {
-		if (button == Input.Buttons.RIGHT) {
+		if (button == Input.Buttons.RIGHT && !getSystemsCommonData().getMenuTable().isVisible()) {
 			getSystemsCommonData().setCameraIsRotating(true);
 			lastRightPressMousePosition.set(screenX, screenY);
 		}
@@ -114,9 +141,9 @@ public class CameraSystem extends GameSystem<CameraSystemEventsSubscriber> imple
 	}
 
 	private void initCamera(OrthographicCamera cam) {
-//		Entity player = getEngine().getEntitiesFor(Family.all(PlayerComponent.class).get()).get(0);
-//		Vector2 nodePosition = ComponentsMapper.characterDecal.get(player).getNodePosition(auxVector2_1);
-		cam.position.set(5 + START_OFFSET, CAMERA_HEIGHT, 0 + START_OFFSET);
+		Entity player = getSystemsCommonData().getPlayer();
+		Vector2 nodePosition = ComponentsMapper.characterDecal.get(player).getNodePosition(auxVector2_1);
+		cam.position.set(nodePosition.x + START_OFFSET, CAMERA_HEIGHT, nodePosition.y + START_OFFSET);
 		cam.direction.rotate(Vector3.X, -45);
 		cam.direction.rotate(Vector3.Y, INITIAL_CAMERA_ANGLE_AROUND_Y);
 		cam.update();

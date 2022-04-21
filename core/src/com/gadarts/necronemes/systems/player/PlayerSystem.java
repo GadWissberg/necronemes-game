@@ -13,6 +13,7 @@ import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
@@ -49,8 +50,11 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	private static final Vector3 auxVector3 = new Vector3();
 	private PathPlanHandler playerPathPlanner;
 
-	public PlayerSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public PlayerSystem(SystemsCommonData systemsCommonData,
+						SoundPlayer soundPlayer,
+						GameAssetsManager assetsManager,
+						GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
 
 	@Override
@@ -310,6 +314,15 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	public void initializeData( ) {
 		playerPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());
 		playerPathPlanner.init((PooledEngine) getEngine());
+		if (!getLifeCycleHandler().isInGame()) {
+			changePlayerStatus(true);
+		}
+	}
+
+	private void changePlayerStatus(final boolean disabled) {
+		PlayerComponent playerComponent = ComponentsMapper.player.get(getSystemsCommonData().getPlayer());
+		playerComponent.setDisabled(disabled);
+		subscribers.forEach(subscriber -> subscriber.onPlayerStatusChanged(disabled));
 	}
 
 	@Override

@@ -32,6 +32,7 @@ import com.gadarts.necromine.model.characters.CharacterUtils;
 import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.LightComponent;
@@ -112,8 +113,11 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	private ShaderProgram shadowsShaderProgram;
 	private boolean take;
 
-	public RenderSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public RenderSystem(SystemsCommonData systemsCommonData,
+						SoundPlayer soundPlayer,
+						GameAssetsManager assetsManager,
+						GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 		shadowFrameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 		shaderProvider = new MainShaderProvider(getAssetsManager(), shadowFrameBuffer);
 		createBatches();
@@ -278,7 +282,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		nearbyCharacters.clear();
 		for (Entity character : characterDecalsEntities) {
 			Vector3 position = characterDecal.get(character).getDecal().getPosition();
-			auxCircle.set(position.x, position.z, CharacterComponent.CHAR_RAD*3F);
+			auxCircle.set(position.x, position.z, CharacterComponent.CHAR_RAD * 3F);
 			Vector3 floorPos = modelInstance.get(entity).getModelInstance().transform.getTranslation(auxVector3_1);
 			auxRect.set(floorPos.x, floorPos.z, 1F, 1F);
 			if (Intersector.overlaps(auxCircle, auxRect)) {
@@ -443,8 +447,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 
 	private void renderLiveCharacters(final float deltaTime) {
 		for (Entity entity : characterDecalsEntities) {
-			initializeCharacterDecalForRendering(deltaTime, entity);
-			renderCharacterDecal(entity);
+			if (!player.has(entity) || !ComponentsMapper.player.get(entity).isDisabled()) {
+				initializeCharacterDecalForRendering(deltaTime, entity);
+				renderCharacterDecal(entity);
+			}
 		}
 	}
 
@@ -638,10 +644,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 										   CharacterSpriteData charSpriteData,
 										   SpriteType spriteType) {
 		CharacterDecalComponent characterDecalComponent = characterDecal.get(entity);
-		Decal decal = characterDecalComponent.getDecal();
 		AnimationComponent aniComp = animation.get(entity);
-		if (animation.has(entity) && aniComp.getAnimation() != null) {
-			AtlasRegion currentFrame = (AtlasRegion) decal.getTextureRegion();
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		if (!systemsCommonData.getMenuTable().isVisible() && animation.has(entity) && aniComp.getAnimation() != null) {
+			AtlasRegion currentFrame = (AtlasRegion) characterDecalComponent.getDecal().getTextureRegion();
 			AtlasRegion newFrame = calculateCharacterDecalNewFrame(delta, entity, aniComp, currentFrame);
 			if (characterDecalComponent.getSpriteType() == spriteType && currentFrame != newFrame) {
 				updateCharacterDecalTextureAccordingToAnimation(entity, charSpriteData, spriteType, newFrame);

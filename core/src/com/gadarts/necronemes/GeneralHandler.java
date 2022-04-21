@@ -21,6 +21,7 @@ import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemEventsSubscriber;
 import com.gadarts.necronemes.systems.Systems;
 import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.ui.UserInterfaceSystem;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
 
 import java.lang.reflect.InvocationTargetException;
@@ -28,7 +29,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubscriber {
+public class GeneralHandler implements GameLifeCycleHandler, Disposable, UserInterfaceSystemEventsSubscriber {
 	public static final String BOUNDING_BOX_PREFIX = "box_";
 	private final Map<
 			Class<? extends SystemEventsSubscriber>,
@@ -46,7 +47,8 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 				Object system = systemDefinition.getSystemClass().getConstructors()[0].newInstance(
 						systemsCommonData,
 						soundPlayer,
-						assetsManager);
+						assetsManager,
+						this);
 				engine.addSystem((GameSystem<? extends SystemEventsSubscriber>) system);
 			} catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
 				e.printStackTrace();
@@ -63,7 +65,7 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 		systemsCommonData.setMap(mapBuilder.inflateTestMap(mapName));
 	}
 
-	private void generateModelsBoundingBoxes() {
+	private void generateModelsBoundingBoxes( ) {
 		Arrays.stream(Assets.Models.values())
 				.forEach(def -> {
 					Model model = assetsManager.get(def.getFilePath(), Model.class);
@@ -74,7 +76,7 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 				});
 	}
 
-	private void generateCharactersAnimations() {
+	private void generateCharactersAnimations( ) {
 		Arrays.stream(Assets.Atlases.values())
 				.forEach(atlas -> assetsManager.addAsset(
 						atlas.name(),
@@ -96,7 +98,7 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 		return animations;
 	}
 
-	private void applyAlphaOnModels() {
+	private void applyAlphaOnModels( ) {
 		Arrays.stream(Assets.Models.values()).filter(def -> def.getAlpha() < 1.0f)
 				.forEach(def -> {
 					Material material = assetsManager.getModel(def).materials.get(0);
@@ -106,7 +108,7 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 				});
 	}
 
-	public void resetSystems() {
+	public void resetSystems( ) {
 		engine.getSystems().forEach(system -> ((GameSystem<? extends SystemEventsSubscriber>) system).reset());
 		initializeSystems();
 	}
@@ -116,13 +118,14 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 		createAndSetMap(mapName);
 		inGame = true;
 		resetSystems();
+		engine.getSystem(UserInterfaceSystem.class).getMenuHandler().toggleMenu(false);
 	}
 
-	private void createAndSetEngine() {
+	private void createAndSetEngine( ) {
 		this.engine = new PooledEngine();
 	}
 
-	private void initializeAssets() {
+	private void initializeAssets( ) {
 		assetsManager = new GameAssetsManager();
 		assetsManager.loadGameFiles();
 		generateCharactersAnimations();
@@ -131,7 +134,7 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 	}
 
 	@SuppressWarnings("unchecked")
-	private void initializeSystems() {
+	private void initializeSystems( ) {
 		addSystems(systemsCommonData);
 		ImmutableArray<EntitySystem> systems = engine.getSystems();
 		systems.forEach(system -> ((GameSystem<? extends SystemEventsSubscriber>) system).initializeData());
@@ -156,7 +159,7 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 	}
 
 	@Override
-	public void onNewGameSelectedInMenu() {
+	public void onNewGameSelectedInMenu( ) {
 		startNewGame("mastaba");
 	}
 
@@ -164,12 +167,16 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 		systemsCommonData = new SystemsCommonData(versionName, versionNumber);
 		initializeAssets();
 		soundPlayer = new SoundPlayer(assetsManager);
+		createAndSetEngine();
+		createAndSetMap("mastaba");
+		initializeSystems();
 	}
 
 	@Override
-	public void dispose() {
+	public void dispose( ) {
 		engine.getSystems().forEach(system -> ((GameSystem<? extends SystemEventsSubscriber>) system).dispose());
 		assetsManager.dispose();
+		mapBuilder.dispose();
 	}
 
 	private void inflateCharacterAnimation(final CharacterAnimations animations,
@@ -197,5 +204,10 @@ public class GeneralHandler implements Disposable, UserInterfaceSystemEventsSubs
 
 	public void update(float delta) {
 		engine.update(delta);
+	}
+
+	@Override
+	public boolean isInGame( ) {
+		return inGame;
 	}
 }

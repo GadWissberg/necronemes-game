@@ -3,6 +3,7 @@ package com.gadarts.necronemes.systems;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.g3d.particles.ParticleSystem;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.gadarts.necronemes.systems.player.PlayerStorage;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.systems.character.CharacterCommand;
@@ -34,6 +35,7 @@ public class SystemsCommonData {
 	private Entity currentHighLightedPickup;
 	private Entity itemToPickup;
 	private long currentTurnId;
+	private Table menuTable;
 
 	public SystemsCommonData(String versionName, int versionNumber) {
 		this.versionName = versionName;

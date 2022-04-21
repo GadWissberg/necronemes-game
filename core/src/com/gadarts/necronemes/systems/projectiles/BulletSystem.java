@@ -17,6 +17,7 @@ import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necromine.model.characters.attributes.Accuracy;
 import com.gadarts.necromine.model.map.MapNodesTypes;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.BulletComponent;
 import com.gadarts.necronemes.components.ComponentsMapper;
@@ -62,8 +63,9 @@ public class BulletSystem extends GameSystem<BulletSystemEventsSubscriber> imple
 
 	public BulletSystem(SystemsCommonData systemsCommonData,
 						SoundPlayer soundPlayer,
-						GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+						GameAssetsManager assetsManager,
+						GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
 
 	@Override

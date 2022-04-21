@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.PickUpComponent;
@@ -28,8 +29,11 @@ public class PickupSystem extends GameSystem<SystemEventsSubscriber> implements 
 	private final float[] hsvArray = new float[3];
 	private ImmutableArray<Entity> pickupEntities;
 
-	public PickupSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public PickupSystem(SystemsCommonData systemsCommonData,
+						SoundPlayer soundPlayer,
+						GameAssetsManager assetsManager,
+						GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
 
 	@Override

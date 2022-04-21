@@ -22,6 +22,7 @@ import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.attributes.Agility;
 import com.gadarts.necromine.model.characters.attributes.Strength;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
+import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.animation.AnimationComponent;
@@ -73,8 +74,11 @@ public class CharacterSystem extends GameSystem<CharacterSystemEventsSubscriber>
 	private ParticleEffect bloodSplatterEffect;
 	private ImmutableArray<Entity> characters;
 
-	public CharacterSystem(SystemsCommonData systemsCommonData, SoundPlayer soundPlayer, GameAssetsManager assetsManager) {
-		super(systemsCommonData, soundPlayer, assetsManager);
+	public CharacterSystem(SystemsCommonData systemsCommonData,
+						   SoundPlayer soundPlayer,
+						   GameAssetsManager assetsManager,
+						   GameLifeCycleHandler lifeCycleHandler) {
+		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
 
 	@Override

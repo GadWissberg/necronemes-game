@@ -5,7 +5,7 @@ import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import static com.badlogic.gdx.Application.LOG_DEBUG;
 
 public final class DefaultGameSettings {
-	public static final boolean MENU_ON_STARTUP = false;
+	public static final boolean MENU_ON_STARTUP = true;
 	public static final boolean DISABLE_LIGHTS = false;
 	public static final boolean DISPLAY_CURSOR_POSITION = true;
 	public static final Integer ENEMIES_SKILL = 5;
