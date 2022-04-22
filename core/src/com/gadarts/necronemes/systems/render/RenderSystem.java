@@ -50,10 +50,17 @@ import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.sd.RelatedDecal;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;
+import com.gadarts.necronemes.console.commands.ConsoleCommandParameter;
+import com.gadarts.necronemes.console.commands.ConsoleCommandResult;
+import com.gadarts.necronemes.console.commands.ConsoleCommands;
+import com.gadarts.necronemes.console.commands.ConsoleCommandsList;
 import com.gadarts.necronemes.systems.GameSystem;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.enemy.EnemyAiStatus;
 import com.gadarts.necronemes.systems.input.InputSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.render.shaders.DepthMapShader;
+import com.gadarts.necronemes.systems.render.shaders.MainShaderProvider;
+import com.gadarts.necronemes.systems.render.shaders.ShadowMapShader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,13 +69,7 @@ import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 import static com.gadarts.necromine.assets.Assets.Shaders.*;
 import static com.gadarts.necromine.assets.Assets.Shaders.SHADOW_FRAGMENT;
 import static com.gadarts.necromine.model.characters.SpriteType.ATTACK_PRIMARY;
-import static com.gadarts.necronemes.components.ComponentsMapper.animation;
-import static com.gadarts.necronemes.components.ComponentsMapper.character;
-import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
-import static com.gadarts.necronemes.components.ComponentsMapper.modelInstance;
-import static com.gadarts.necronemes.components.ComponentsMapper.player;
-import static com.gadarts.necronemes.components.ComponentsMapper.shadowlessLight;
-import static com.gadarts.necronemes.components.ComponentsMapper.simpleDecal;
+import static com.gadarts.necronemes.components.ComponentsMapper.*;
 import static com.gadarts.necronemes.systems.SystemsCommonData.CAMERA_LIGHT_FAR;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -98,6 +99,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	private final Environment environment;
 	private final MainShaderProvider shaderProvider;
 	private final FrameBuffer shadowFrameBuffer;
+	private final DrawFlags drawFlags = new DrawFlags();
 	private ModelBatch depthModelBatch;
 	private ModelBatch modelBatchShadows;
 	private ImmutableArray<Entity> shadowlessLightsEntities;
@@ -112,6 +114,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	private ShaderProgram depthShaderProgram;
 	private ShaderProgram shadowsShaderProgram;
 	private boolean take;
+	private boolean frustumCull = !DefaultGameSettings.DISABLE_FRUSTUM_CULLING;
 
 	public RenderSystem(SystemsCommonData systemsCommonData,
 						SoundPlayer soundPlayer,
@@ -125,6 +128,22 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		skillFlowerFont = new BitmapFont();
 		skillFlowerGlyph = new GlyphLayout();
 		environment = createEnvironment();
+	}
+
+	private void handleFrustumCullingCommand(final ConsoleCommandResult consoleCommandResult) {
+		frustumCull = !frustumCull;
+		final String MESSAGE = "Frustum culling has been %s.";
+		String msg = frustumCull ? String.format(MESSAGE, "activated") : String.format(MESSAGE, "disabled");
+		consoleCommandResult.setMessage(msg);
+	}
+
+	@Override
+	public boolean onCommandRun(final ConsoleCommands command, final ConsoleCommandResult consoleCommandResult) {
+		if (command == ConsoleCommandsList.FRUSTUM_CULLING) {
+			handleFrustumCullingCommand(consoleCommandResult);
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -218,6 +237,18 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		return camera.frustum.boundsInFrustum(position.add(center), dim);
 	}
 
+	@Override
+	public boolean onCommandRun(final ConsoleCommands command,
+								final ConsoleCommandResult consoleCommandResult,
+								final ConsoleCommandParameter parameter) {
+		boolean result = false;
+		if (command == ConsoleCommandsList.SKIP_RENDER) {
+			drawFlags.applySkipRenderCommand(parameter);
+			result = true;
+		}
+		return result;
+	}
+
 	private void renderModels(ModelBatch modelBatch,
 							  boolean renderLight,
 							  Camera camera) {
@@ -300,7 +331,10 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 										  ModelInstanceComponent modelInstanceComponent) {
 		return entity == exclude
 				|| (!modelInstanceComponent.isVisible())
-				|| !isVisible(camera, entity);
+				|| !isVisible(camera, entity)
+				|| floor.has(entity) && !drawFlags.isDrawGround()
+				|| obstacle.has(entity) && !drawFlags.isDrawEnv()
+				|| getSystemsCommonData().getCursor() == entity && !drawFlags.isDrawCursor();
 	}
 
 	@Override
@@ -447,11 +481,19 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 
 	private void renderLiveCharacters(final float deltaTime) {
 		for (Entity entity : characterDecalsEntities) {
-			if (!player.has(entity) || !ComponentsMapper.player.get(entity).isDisabled()) {
+			if (shouldRenderPlayer(entity) || shouldRenderEnemy(entity)) {
 				initializeCharacterDecalForRendering(deltaTime, entity);
 				renderCharacterDecal(entity);
 			}
 		}
+	}
+
+	private boolean shouldRenderEnemy(Entity entity) {
+		return enemy.has(entity) && drawFlags.isDrawEnemy();
+	}
+
+	private boolean shouldRenderPlayer(Entity entity) {
+		return player.has(entity) && !ComponentsMapper.player.get(entity).isDisabled();
 	}
 
 	private boolean shouldApplyLightsOnDecal(final Entity entity,

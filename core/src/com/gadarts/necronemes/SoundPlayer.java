@@ -4,6 +4,11 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necronemes.console.ConsoleEventsSubscriber;
+import com.gadarts.necronemes.console.commands.ConsoleCommandParameter;
+import com.gadarts.necronemes.console.commands.ConsoleCommandResult;
+import com.gadarts.necronemes.console.commands.ConsoleCommands;
+import com.gadarts.necronemes.console.commands.ConsoleCommandsList;
 import com.gadarts.necronemes.utils.GeneralUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,8 +19,7 @@ import java.util.List;
 import static com.badlogic.gdx.math.MathUtils.random;
 import static com.badlogic.gdx.math.MathUtils.randomBoolean;
 
-public class SoundPlayer {
-	public static final boolean SFX_ENABLED = false;
+public class SoundPlayer implements ConsoleEventsSubscriber {
 	private static final float MELODY_VOLUME = 0.4f;
 	private static final float PITCH_OFFSET = 0.1f;
 	private final GameAssetsManager assetManager;
@@ -31,7 +35,7 @@ public class SoundPlayer {
 		setSfxEnabled(DefaultGameSettings.SFX_ENABLED);
 		setMusicEnabled(DefaultGameSettings.MELODY_ENABLED);
 	}
-	
+
 
 	public void setMusicEnabled(final boolean musicEnabled) {
 		this.musicEnabled = musicEnabled;
@@ -81,5 +85,54 @@ public class SoundPlayer {
 
 	public void stopLoopingSounds( ) {
 		loopingSounds.forEach(Sound::stop);
+	}
+
+	@Override
+	public boolean onCommandRun(ConsoleCommands command, ConsoleCommandResult consoleCommandResult) {
+		if (command == ConsoleCommandsList.SFX) {
+			applySfxCommand(consoleCommandResult);
+			return true;
+		} else if (command == ConsoleCommandsList.MELODY) {
+			applyMusicCommand(consoleCommandResult);
+			return true;
+		}
+		return false;
+	}
+
+	private void logAudioMessage(final ConsoleCommandResult consoleCommandResult,
+								 final String label,
+								 final boolean sfxEnabled) {
+		String msg = sfxEnabled ? String.format("%s enabled.", label) : String.format("%s disabled.", label);
+		consoleCommandResult.setMessage(msg);
+	}
+
+	private void applyMusicCommand(final ConsoleCommandResult consoleCommandResult) {
+		setMusicEnabled(!isMusicEnabled());
+		logAudioMessage(consoleCommandResult, "Melodies", isMusicEnabled());
+	}
+
+	private void applySfxCommand(final ConsoleCommandResult consoleCommandResult) {
+		boolean originalValue = isSfxEnabled();
+		setSfxEnabled(!isSfxEnabled());
+		if (!isSfxEnabled()) {
+			stopLoopingSounds();
+		} else if (!originalValue) {
+			playAmbSound();
+		}
+		logAudioMessage(consoleCommandResult, "Sound effects", isSfxEnabled());
+	}
+
+	private void playAmbSound( ) {
+		playSound(Assets.Sounds.AMB_WIND, 0.5F);
+	}
+
+	@Override
+	public boolean onCommandRun(ConsoleCommands command, ConsoleCommandResult consoleCommandResult, ConsoleCommandParameter parameter) {
+		return ConsoleEventsSubscriber.super.onCommandRun(command, consoleCommandResult, parameter);
+	}
+
+	@Override
+	public void onConsoleDeactivated( ) {
+		ConsoleEventsSubscriber.super.onConsoleDeactivated();
 	}
 }

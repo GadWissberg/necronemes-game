@@ -3,6 +3,8 @@ package com.gadarts.necronemes;
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -15,31 +17,39 @@ import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necronemes.components.character.CharacterAnimation;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
+import com.gadarts.necronemes.console.Console;
+import com.gadarts.necronemes.console.ConsoleImpl;
 import com.gadarts.necronemes.map.MapBuilder;
-import com.gadarts.necronemes.systems.EventsNotifier;
-import com.gadarts.necronemes.systems.GameSystem;
-import com.gadarts.necronemes.systems.SystemEventsSubscriber;
-import com.gadarts.necronemes.systems.Systems;
-import com.gadarts.necronemes.systems.SystemsCommonData;
+import com.gadarts.necronemes.systems.*;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystem;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
+import lombok.RequiredArgsConstructor;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-public class GeneralHandler implements GameLifeCycleHandler, Disposable, UserInterfaceSystemEventsSubscriber {
+
+@RequiredArgsConstructor
+public class GeneralHandler implements
+		GameLifeCycleHandler,
+		Disposable,
+		UserInterfaceSystemEventsSubscriber {
 	public static final String BOUNDING_BOX_PREFIX = "box_";
 	private final Map<
 			Class<? extends SystemEventsSubscriber>,
 			GameSystem<? extends SystemEventsSubscriber>> subscribersInterfaces = new HashMap<>();
+	private final String versionName;
+	private final int versionNumber;
 	private PooledEngine engine;
 	private GameAssetsManager assetsManager;
 	private SoundPlayer soundPlayer;
 	private MapBuilder mapBuilder;
 	private SystemsCommonData systemsCommonData;
 	private boolean inGame;
+	private Console console;
 
 	private void addSystems(SystemsCommonData systemsCommonData) {
 		Arrays.stream(Systems.values()).forEach(systemDefinition -> {
@@ -115,13 +125,25 @@ public class GeneralHandler implements GameLifeCycleHandler, Disposable, UserInt
 
 	public void startNewGame(String mapName) {
 		createAndSetEngine();
-		createAndSetMap(mapName);
 		inGame = true;
+		initializeSystemsCommonData(mapName);
 		resetSystems();
+		createConsole();
 		engine.getSystem(UserInterfaceSystem.class).getMenuHandler().toggleMenu(false);
 	}
 
+	private void initializeSystemsCommonData(String mapName) {
+		Optional.ofNullable(systemsCommonData).ifPresent(SystemsCommonData::dispose);
+		systemsCommonData = new SystemsCommonData(versionName, versionNumber);
+		createAndSetMap(mapName);
+	}
+
 	private void createAndSetEngine( ) {
+		Optional.ofNullable(engine).ifPresent(e -> {
+			e.clearPools();
+			e.removeAllEntities();
+			e.removeAllSystems();
+		});
 		this.engine = new PooledEngine();
 	}
 
@@ -163,13 +185,34 @@ public class GeneralHandler implements GameLifeCycleHandler, Disposable, UserInt
 		startNewGame("mastaba");
 	}
 
-	public void init(String versionName, int versionNumber) {
-		systemsCommonData = new SystemsCommonData(versionName, versionNumber);
+	public void init( ) {
 		initializeAssets();
 		soundPlayer = new SoundPlayer(assetsManager);
 		createAndSetEngine();
-		createAndSetMap("mastaba");
+		initializeSystemsCommonData("mastaba");
 		initializeSystems();
+		createConsole();
+	}
+
+	private void createConsole( ) {
+		Optional.ofNullable(console).ifPresent(Console::dispose);
+		ConsoleImpl console = new ConsoleImpl();
+		initializeConsole(console);
+		this.console = console;
+	}
+
+	private void initializeConsole(ConsoleImpl console) {
+		ImmutableArray<EntitySystem> systems = engine.getSystems();
+		addSubscribersForConsole(console, systems);
+		console.init(assetsManager, systemsCommonData);
+		systemsCommonData.getUiStage().addActor(console);
+		InputMultiplexer multiplexer = (InputMultiplexer) Gdx.input.getInputProcessor();
+		multiplexer.addProcessor(console);
+	}
+
+	private void addSubscribersForConsole(ConsoleImpl console, ImmutableArray<EntitySystem> systems) {
+		systems.forEach(system -> console.subscribeForEvents((GameSystem<? extends SystemEventsSubscriber>) system));
+		console.subscribeForEvents(soundPlayer);
 	}
 
 	@Override
@@ -177,6 +220,8 @@ public class GeneralHandler implements GameLifeCycleHandler, Disposable, UserInt
 		engine.getSystems().forEach(system -> ((GameSystem<? extends SystemEventsSubscriber>) system).dispose());
 		assetsManager.dispose();
 		mapBuilder.dispose();
+		console.dispose();
+		systemsCommonData.dispose();
 	}
 
 	private void inflateCharacterAnimation(final CharacterAnimations animations,

@@ -27,7 +27,6 @@ public class CharacterDecalComponent implements GameComponent {
 
 	@Override
 	public void reset( ) {
-		animations.clear();
 	}
 
 	public void init(final CharacterAnimations animations,

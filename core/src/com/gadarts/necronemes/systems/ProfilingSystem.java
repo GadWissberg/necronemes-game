@@ -16,6 +16,11 @@ import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
+import com.gadarts.necronemes.console.commands.ConsoleCommandParameter;
+import com.gadarts.necronemes.console.commands.ConsoleCommandResult;
+import com.gadarts.necronemes.console.commands.ConsoleCommands;
+import com.gadarts.necronemes.console.commands.ConsoleCommandsList;
+import com.gadarts.necronemes.console.commands.types.ProfilerCommand;
 
 public class ProfilingSystem extends GameSystem<SystemEventsSubscriber> {
 	public static final String WARNING_COLOR = "[RED]";
@@ -49,11 +54,52 @@ public class ProfilingSystem extends GameSystem<SystemEventsSubscriber> {
 		setGlProfiler();
 	}
 
+	@Override
+	public boolean onCommandRun(final ConsoleCommands command, final ConsoleCommandResult consoleCommandResult) {
+		return onCommandRun(command, consoleCommandResult, null);
+	}
+
+	/**
+	 * Toggles the GLProfiler.
+	 */
+	private void toggle( ) {
+		if (glProfiler.isEnabled()) {
+			glProfiler.disable();
+		} else {
+			glProfiler.enable();
+			reset();
+		}
+		stringBuilder.clear();
+		label.setVisible(glProfiler.isEnabled());
+	}
+
+	private String reactToCommand(final ConsoleCommands command) {
+		String msg = null;
+		if (command == ConsoleCommandsList.PROFILER) {
+			toggle();
+			msg = glProfiler.isEnabled() ? ProfilerCommand.PROFILING_ACTIVATED : ProfilerCommand.PROFILING_DEACTIVATED;
+		}
+		return msg;
+	}
+
+	@Override
+	public boolean onCommandRun(final ConsoleCommands command,
+								final ConsoleCommandResult consoleCommandResult,
+								final ConsoleCommandParameter parameter) {
+		String msg = reactToCommand(command);
+		boolean result = false;
+		if (msg != null) {
+			consoleCommandResult.setMessage(msg);
+			result = true;
+		}
+		return result;
+	}
+
 	/**
 	 * Resets the GLProfiler.
 	 */
 	@Override
-	public void reset() {
+	public void reset( ) {
 		glProfiler.reset();
 	}
 

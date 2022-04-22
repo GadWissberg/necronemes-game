@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
+import com.gadarts.necronemes.console.ConsoleEventsSubscriber;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -14,7 +15,8 @@ import java.util.List;
 @Getter(AccessLevel.PROTECTED)
 public abstract class GameSystem<T extends SystemEventsSubscriber> extends EntitySystem implements
 		Disposable,
-		EventsNotifier<T> {
+		EventsNotifier<T>,
+		ConsoleEventsSubscriber {
 	protected final List<T> subscribers = new ArrayList<>();
 	private final SystemsCommonData systemsCommonData;
 	private final SoundPlayer soundPlayer;

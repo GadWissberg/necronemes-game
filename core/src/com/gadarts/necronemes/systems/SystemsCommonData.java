@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.g3d.particles.ParticleSystem;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.utils.Disposable;
 import com.gadarts.necronemes.systems.player.PlayerStorage;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.systems.character.CharacterCommand;
@@ -14,7 +15,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class SystemsCommonData {
+public class SystemsCommonData implements Disposable {
 	public static final int CAMERA_LIGHT_FAR = 10;
 	public static final String TABLE_NAME_HUD = "hud";
 
@@ -40,5 +41,11 @@ public class SystemsCommonData {
 	public SystemsCommonData(String versionName, int versionNumber) {
 		this.versionName = versionName;
 		this.versionNumber = versionNumber;
+	}
+
+	@Override
+	public void dispose( ) {
+		uiStage.clear();
+		uiStage.dispose();
 	}
 }

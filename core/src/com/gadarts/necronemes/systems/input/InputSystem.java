@@ -46,6 +46,23 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 	}
 
 	private void initializeInputProcessor( ) {
+		InputProcessor inputProcessor = Gdx.input.getInputProcessor();
+		if (inputProcessor == null) {
+			createInputProcessor();
+		} else {
+			clearMultiplexer((InputMultiplexer) inputProcessor);
+		}
+		addInputProcessor(this);
+		addInputProcessor(getSystemsCommonData().getUiStage());
+	}
+
+	private void clearMultiplexer(InputMultiplexer inputProcessor) {
+		if (!DefaultGameSettings.DEBUG_INPUT) {
+			inputProcessor.clear();
+		}
+	}
+
+	private void createInputProcessor( ) {
 		InputProcessor input;
 		if (DefaultGameSettings.DEBUG_INPUT) {
 			input = createDebugInput();
@@ -53,7 +70,6 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 			input = createMultiplexer();
 		}
 		Gdx.input.setInputProcessor(input);
-		addInputProcessor(getSystemsCommonData().getUiStage());
 	}
 
 	private void addInputProcessor(final InputProcessor inputProcessor) {
@@ -64,9 +80,7 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 
 	private InputProcessor createMultiplexer( ) {
 		InputProcessor input;
-		InputMultiplexer multiplexer = new InputMultiplexer();
-		input = multiplexer;
-		multiplexer.addProcessor(this);
+		input = new InputMultiplexer();
 		return input;
 	}
 
@@ -89,7 +103,7 @@ public class InputSystem extends GameSystem<InputSystemEventsSubscriber> impleme
 		for (InputSystemEventsSubscriber subscriber : subscribers) {
 			subscriber.keyDown(keycode);
 		}
-		return true;
+		return false;
 	}
 
 	@Override

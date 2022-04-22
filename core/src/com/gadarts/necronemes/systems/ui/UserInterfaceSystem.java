@@ -23,6 +23,9 @@ import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.player.Item;
+import com.gadarts.necronemes.console.commands.ConsoleCommandResult;
+import com.gadarts.necronemes.console.commands.ConsoleCommands;
+import com.gadarts.necronemes.console.commands.ConsoleCommandsList;
 import com.gadarts.necronemes.map.MapGraph;
 import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.GameSystem;
@@ -54,9 +57,8 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	private static final String BUTTON_NAME_STORAGE = "button_storage";
 	private static final float BUTTON_PADDING = 40;
 	private final SoundPlayer soundPlayer;
-	private final boolean showBorders = DefaultGameSettings.DISPLAY_HUD_OUTLINES;
 	private final AttackNodesHandler attackNodesHandler = new AttackNodesHandler();
-
+	private boolean showBorders = DefaultGameSettings.DISPLAY_HUD_OUTLINES;
 	@Getter
 	private MenuHandler menuHandler;
 	private CursorHandler cursorHandler;
@@ -67,10 +69,23 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 							   GameLifeCycleHandler lifeCycleHandler) {
 		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 		this.soundPlayer = soundPlayer;
-		createUiStage();
+		addUiStage();
 		Table hudTable = addTable();
 		hudTable.setName(TABLE_NAME_HUD);
 		addStorageButton(hudTable);
+	}
+
+	@Override
+	public boolean onCommandRun(final ConsoleCommands command, final ConsoleCommandResult consoleCommandResult) {
+		if (command == ConsoleCommandsList.BORDERS) {
+			this.showBorders = !showBorders;
+			getSystemsCommonData().getUiStage().setDebugAll(showBorders);
+			final String MESSAGE = "UI borders are %s.";
+			String msg = showBorders ? String.format(MESSAGE, "displayed") : String.format(MESSAGE, "hidden");
+			consoleCommandResult.setMessage(msg);
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -118,7 +133,6 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		return new Button(buttonStyle);
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	private Table addTable( ) {
 		Table table = new Table();
 		Stage stage = getSystemsCommonData().getUiStage();
@@ -128,11 +142,16 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		return table;
 	}
 
-	private void createUiStage( ) {
+	@Override
+	public void reset( ) {
+		getSystemsCommonData().getUiStage().dispose();
+	}
+
+	private void addUiStage( ) {
 		int width = FULL_SCREEN ? FULL_SCREEN_RESOLUTION_WIDTH : WINDOWED_RESOLUTION_WIDTH;
 		int height = FULL_SCREEN ? FULL_SCREEN_RESOLUTION_HEIGHT : WINDOWED_RESOLUTION_HEIGHT;
-		FitViewport fitViewport = new FitViewport(width, height);
-		GameStage stage = new GameStage(fitViewport, soundPlayer);
+		GameStage stage;
+		stage = new GameStage(new FitViewport(width, height), soundPlayer);
 		getSystemsCommonData().setUiStage(stage);
 		stage.setDebugAll(DefaultGameSettings.DISPLAY_HUD_OUTLINES);
 	}
