@@ -94,11 +94,11 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	private static final Rectangle auxRect = new Rectangle();
 	private final Texture iconFlowerLookingFor;
 	private final StringBuilder stringBuilder = new StringBuilder();
-	private final GlyphLayout skillFlowerGlyph;
-	private final BitmapFont skillFlowerFont;
 	private final Environment environment;
 	private final MainShaderProvider shaderProvider;
 	private final FrameBuffer shadowFrameBuffer;
+	private GlyphLayout skillFlowerGlyph;
+	private BitmapFont skillFlowerFont;
 	private ModelBatch depthModelBatch;
 	private ModelBatch modelBatchShadows;
 	private ImmutableArray<Entity> shadowlessLightsEntities;
@@ -123,10 +123,17 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		shadowFrameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 		shaderProvider = new MainShaderProvider(getAssetsManager(), shadowFrameBuffer);
 		createBatches();
+		iconFlowerLookingFor = initializeSkillFlowerData(assetsManager);
+		environment = createEnvironment();
+		getSystemsCommonData().setDrawFlags(new DrawFlags());
+	}
+
+	private Texture initializeSkillFlowerData(GameAssetsManager assetsManager) {
+		final Texture iconFlowerLookingFor;
 		iconFlowerLookingFor = assetsManager.getTexture(Assets.UiTextures.ICON_LOOKING_FOR);
 		skillFlowerFont = new BitmapFont();
 		skillFlowerGlyph = new GlyphLayout();
-		environment = createEnvironment();
+		return iconFlowerLookingFor;
 	}
 
 	private void handleFrustumCullingCommand(final ConsoleCommandResult consoleCommandResult) {
@@ -203,7 +210,6 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		this.decalBatch = new DecalBatch(DECALS_POOL_SIZE, strategy);
 		createShaderPrograms(assetsManager);
 		createShadowMaps();
-		getSystemsCommonData().setDrawFlags(new DrawFlags());
 	}
 
 	private void createShaderPrograms(GameAssetsManager assetsManager) {

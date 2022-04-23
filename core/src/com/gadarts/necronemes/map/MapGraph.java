@@ -45,6 +45,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private final ImmutableArray<Entity> enemiesEntities;
 	private final ImmutableArray<Entity> characterEntities;
 	private final ImmutableArray<Entity> obstacleEntities;
+	private final PooledEngine engine;
 	@Setter(AccessLevel.PACKAGE)
 	@Getter(AccessLevel.PACKAGE)
 	MapGraphNode currentDestination;
@@ -66,12 +67,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 			}
 		}
 		this.pickupEntities = engine.getEntitiesFor(Family.all(PickUpComponent.class).get());
-		ImmutableArray<Entity> floorEntities = engine.getEntitiesFor(Family.all(FloorComponent.class).get());
-		floorEntities.forEach(entity -> {
-			GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(entity).getModelInstance();
-			Vector3 pos = modelInstance.transform.getTranslation(auxVector3);
-			getNode(pos).setEntity(entity);
-		});
+		this.engine = engine;
 	}
 
 	public Entity getAliveEnemyFromNode(final MapGraphNode node) {

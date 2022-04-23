@@ -3,6 +3,7 @@ package com.gadarts.necronemes.map;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -44,6 +45,7 @@ import com.gadarts.necromine.model.map.Wall;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.components.ComponentsMapper;
+import com.gadarts.necronemes.components.FloorComponent;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterData;
 import com.gadarts.necronemes.components.character.CharacterSkillsParameters;
@@ -183,6 +185,16 @@ public class MapBuilder implements Disposable {
 						inflateNode(row, col, currentValue, mapGraph.getNode(col, row));
 					}
 				}));
+		linkFloorEntitiesToNodes(mapGraph);
+	}
+
+	private void linkFloorEntitiesToNodes(MapGraph mapGraph) {
+		ImmutableArray<Entity> floorEntities = engine.getEntitiesFor(Family.all(FloorComponent.class).get());
+		floorEntities.forEach(entity -> {
+			GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(entity).getModelInstance();
+			Vector3 pos = modelInstance.transform.getTranslation(auxVector3_1);
+			mapGraph.getNode(pos).setEntity(entity);
+		});
 	}
 
 	private MapGraphNode getNodeByJson(final MapGraph mapGraph, final JsonObject tileJsonObject) {
