@@ -15,6 +15,7 @@ import com.gadarts.necromine.model.Coords;
 import com.gadarts.necromine.model.map.MapNodesTypes;
 import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.FloorComponent;
+import com.gadarts.necronemes.components.ObstacleComponent;
 import com.gadarts.necronemes.components.PickUpComponent;
 import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.enemy.EnemyComponent;
@@ -43,6 +44,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private final ImmutableArray<Entity> pickupEntities;
 	private final ImmutableArray<Entity> enemiesEntities;
 	private final ImmutableArray<Entity> characterEntities;
+	private final ImmutableArray<Entity> obstacleEntities;
 	@Setter(AccessLevel.PACKAGE)
 	@Getter(AccessLevel.PACKAGE)
 	MapGraphNode currentDestination;
@@ -54,6 +56,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	public MapGraph(Dimension mapSize, PooledEngine engine, float ambient) {
 		this.ambient = ambient;
 		this.characterEntities = engine.getEntitiesFor(Family.all(CharacterComponent.class).get());
+		this.obstacleEntities = engine.getEntitiesFor(Family.all(ObstacleComponent.class).get());
 		this.enemiesEntities = engine.getEntitiesFor(Family.all(EnemyComponent.class).get());
 		this.mapSize = mapSize;
 		this.nodes = new Array<>(mapSize.width * mapSize.height);
@@ -148,7 +151,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	}
 
 	public MapGraphNode getNode(final int col, final int row) {
-		int index = Math.max(Math.min(row, mapSize.height) * mapSize.width + Math.min(col, mapSize.width-1), 0);
+		int index = Math.max(Math.min(row, mapSize.height) * mapSize.width + Math.min(col, mapSize.width - 1), 0);
 		MapGraphNode result = null;
 		if (index < getWidth() * getDepth()) {
 			result = nodes.get(index);
@@ -322,6 +325,19 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 
 	public void init( ) {
 		applyConnections();
+	}
+
+	public Entity findObstacleByNode(final MapGraphNode node) {
+		Entity result = null;
+		for (Entity obstacle : obstacleEntities) {
+			ModelInstance modelInstance = ComponentsMapper.modelInstance.get(obstacle).getModelInstance();
+			MapGraphNode pickupNode = getNode(modelInstance.transform.getTranslation(auxVector3));
+			if (pickupNode.equals(node)) {
+				result = obstacle;
+				break;
+			}
+		}
+		return result;
 	}
 }
 

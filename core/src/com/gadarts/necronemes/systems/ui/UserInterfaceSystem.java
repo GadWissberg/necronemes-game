@@ -62,6 +62,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	@Getter
 	private MenuHandler menuHandler;
 	private CursorHandler cursorHandler;
+	private ToolTipHandler toolTipHandler;
 
 	public UserInterfaceSystem(SystemsCommonData systemsCommonData,
 							   SoundPlayer soundPlayer,
@@ -165,14 +166,17 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		MapGraphNode oldNode = map.getNode(cursorModelInstance.transform.getTranslation(auxVector3_2));
 		if (newNode != null && !newNode.equals(oldNode)) {
 			cursorHandler.onMouseEnteredNewNode(newNode);
+			toolTipHandler.onMouseEnteredNewNode();
 		}
 	}
 
 	@Override
 	public void update(float deltaTime) {
 		super.update(deltaTime);
-		getSystemsCommonData().getUiStage().act();
+		SystemsCommonData systemsCommonData = getSystemsCommonData();
+		systemsCommonData.getUiStage().act();
 		cursorHandler.handleCursorFlicker(deltaTime);
+		toolTipHandler.handleToolTip(systemsCommonData.getMap(), cursorHandler.getCursorNode());
 	}
 
 	@Override
@@ -188,6 +192,8 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 		attackNodesHandler.init(getEngine());
 		menuHandler = new MenuHandlerImpl(getSystemsCommonData(), getSubscribers(), getAssetsManager(), getSoundPlayer());
 		menuHandler.init(addTable(), getAssetsManager(), getSystemsCommonData(), getSoundPlayer());
+		toolTipHandler = new ToolTipHandler(getSystemsCommonData().getUiStage());
+		toolTipHandler.addToolTipTable();
 	}
 
 
@@ -233,6 +239,7 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	public void dispose( ) {
 		cursorHandler.dispose();
 		attackNodesHandler.dispose();
+		toolTipHandler.dispose();
 	}
 
 }

@@ -99,7 +99,6 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	private final Environment environment;
 	private final MainShaderProvider shaderProvider;
 	private final FrameBuffer shadowFrameBuffer;
-	private final DrawFlags drawFlags = new DrawFlags();
 	private ModelBatch depthModelBatch;
 	private ModelBatch modelBatchShadows;
 	private ImmutableArray<Entity> shadowlessLightsEntities;
@@ -204,6 +203,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		this.decalBatch = new DecalBatch(DECALS_POOL_SIZE, strategy);
 		createShaderPrograms(assetsManager);
 		createShadowMaps();
+		getSystemsCommonData().setDrawFlags(new DrawFlags());
 	}
 
 	private void createShaderPrograms(GameAssetsManager assetsManager) {
@@ -243,7 +243,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 								final ConsoleCommandParameter parameter) {
 		boolean result = false;
 		if (command == ConsoleCommandsList.SKIP_RENDER) {
-			drawFlags.applySkipRenderCommand(parameter);
+			getSystemsCommonData().getDrawFlags().applySkipRenderCommand(parameter);
 			result = true;
 		}
 		return result;
@@ -329,6 +329,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 										  Camera camera,
 										  Entity entity,
 										  ModelInstanceComponent modelInstanceComponent) {
+		DrawFlags drawFlags = getSystemsCommonData().getDrawFlags();
 		return entity == exclude
 				|| (!modelInstanceComponent.isVisible())
 				|| !isVisible(camera, entity)
@@ -489,7 +490,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	}
 
 	private boolean shouldRenderEnemy(Entity entity) {
-		return enemy.has(entity) && drawFlags.isDrawEnemy();
+		return enemy.has(entity) && getSystemsCommonData().getDrawFlags().isDrawEnemy();
 	}
 
 	private boolean shouldRenderPlayer(Entity entity) {
