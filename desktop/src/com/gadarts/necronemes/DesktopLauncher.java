@@ -39,11 +39,6 @@ public class DesktopLauncher {
 
 	private static Lwjgl3ApplicationConfiguration createGameConfig( ) {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-		if (DefaultGameSettings.FULL_SCREEN) {
-			config.setFullscreenMode(Gdx.graphics.getDisplayMode());
-		} else {
-			config.setWindowedMode(WINDOWED_RESOLUTION_WIDTH, WINDOWED_RESOLUTION_HEIGHT);
-		}
 		config.setBackBufferConfig(8, 8, 8, 8, 16, 0, 4);
 		config.setResizable(false);
 		return config;

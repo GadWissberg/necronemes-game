@@ -23,6 +23,11 @@ public class Necronemes extends Game {
 
 	@Override
 	public void create( ) {
+		if (DefaultGameSettings.FULL_SCREEN) {
+			Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
+		} else {
+			Gdx.graphics.setWindowedMode(WINDOWED_RESOLUTION_WIDTH, WINDOWED_RESOLUTION_HEIGHT);
+		}
 		Gdx.app.setLogLevel(DefaultGameSettings.LOG_LEVEL);
 		generalHandler.init();
 		setScreen(new BattleScreen(generalHandler));

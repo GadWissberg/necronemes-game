@@ -34,6 +34,7 @@ public class SoundPlayer implements ConsoleEventsSubscriber {
 		this.assetManager = assetManager;
 		setSfxEnabled(DefaultGameSettings.SFX_ENABLED);
 		setMusicEnabled(DefaultGameSettings.MELODY_ENABLED);
+		playAmbSound();
 	}
 
 
