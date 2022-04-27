@@ -5,12 +5,15 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pools;
 import com.gadarts.necromine.assets.Assets;
 import com.gadarts.necromine.assets.GameAssetsManager;
+import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.GameLifeCycleHandler;
@@ -22,6 +25,7 @@ import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.character.CharacterSpriteData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
+import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.player.Weapon;
@@ -31,8 +35,10 @@ import com.gadarts.necronemes.systems.SystemsCommonData;
 import com.gadarts.necronemes.systems.character.CharacterCommand;
 import com.gadarts.necronemes.systems.character.CharacterCommands;
 import com.gadarts.necronemes.systems.character.CharacterSystemEventsSubscriber;
+import com.gadarts.necronemes.systems.render.RenderSystemEventsSubscriber;
 import com.gadarts.necronemes.systems.ui.AttackNodesHandler;
 import com.gadarts.necronemes.systems.ui.UserInterfaceSystemEventsSubscriber;
+import com.gadarts.necronemes.utils.GeneralUtils;
 
 import java.util.List;
 
@@ -43,8 +49,11 @@ import static com.gadarts.necronemes.utils.GeneralUtils.calculatePath;
 
 public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> implements
 		UserInterfaceSystemEventsSubscriber,
-		CharacterSystemEventsSubscriber {
+		CharacterSystemEventsSubscriber,
+		RenderSystemEventsSubscriber {
 	private static final Vector2 auxVector2_1 = new Vector2();
+	private static final Vector2 auxVector2_2 = new Vector2();
+	private static final Vector2 auxVector2_3 = new Vector2();
 	private static final CalculatePathRequest request = new CalculatePathRequest();
 	private static final CharacterCommand auxCommand = new CharacterCommand();
 	private static final Vector3 auxVector3 = new Vector3();
@@ -56,6 +65,37 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 						GameLifeCycleHandler lifeCycleHandler) {
 		super(systemsCommonData, soundPlayer, assetsManager, lifeCycleHandler);
 	}
+
+	@Override
+	public void onCharacterNodeChanged(Entity entity, MapGraphNode oldNode, MapGraphNode newNode) {
+		if (player.has(entity)) {
+			MapGraph map = getSystemsCommonData().getMap();
+			Vector3 playerPosition = characterDecal.get(entity).getNodePosition(auxVector3);
+			MapGraphNode playerNode = map.getNode(playerPosition);
+			for (int dir = 0; dir < 360; dir += 5) {
+				Vector2 maxSight = auxVector2_2.set(playerPosition.x, playerPosition.z).add(auxVector2_3.set(1, 0).setAngleDeg(dir).nor().scl(8F));
+				Array<GridPoint2> nodes = GeneralUtils.findAllNodesBetweenNodes(auxVector2_1.set(playerPosition.x, playerPosition.z), maxSight);
+				boolean blocked = false;
+				for (GridPoint2 nodeCoord : nodes) {
+					MapGraphNode currentNode = map.getNode(nodeCoord.x, nodeCoord.y);
+					if (currentNode.getEntity() != null) {
+						ModelInstanceComponent modelInstanceComponent = modelInstance.get(currentNode.getEntity());
+						if (!blocked) {
+							if (playerNode.getHeight() + PlayerComponent.PLAYER_HEIGHT < currentNode.getHeight()) {
+								modelInstanceComponent.setVisible(true);
+								blocked = true;
+							} else {
+								modelInstanceComponent.setVisible(true);
+							}
+						} else {
+							modelInstanceComponent.setVisible(false);
+						}
+					}
+				}
+			}
+		}
+	}
+
 
 	@Override
 	public void onSelectedWeaponChanged(Weapon selectedWeapon) {

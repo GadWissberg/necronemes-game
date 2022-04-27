@@ -4,18 +4,23 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.math.collision.Ray;
+import com.badlogic.gdx.utils.Array;
 import com.gadarts.necromine.assets.Assets;
-import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
-import com.gadarts.necronemes.map.*;
-import com.gadarts.necronemes.systems.player.PathPlanHandler;
+import com.gadarts.necronemes.map.CalculatePathRequest;
+import com.gadarts.necronemes.map.GameHeuristic;
+import com.gadarts.necronemes.map.GamePathFinder;
+import com.gadarts.necronemes.map.MapGraphPath;
 import com.google.gson.JsonObject;
 
+import static com.gadarts.necronemes.components.ComponentsMapper.character;
 import static com.gadarts.necronemes.components.ComponentsMapper.characterDecal;
 
 public class GeneralUtils {
 	public static final float EPSILON = 0.025f;
 	private static final Plane floorPlane = new Plane(new Vector3(0, 1, 0), 0);
 	private static final Vector2 auxVector2_1 = new Vector2();
+	private static final Vector2 auxVector2_2 = new Vector2();
+	private static final Bresenham2 bresenham = new Bresenham2();
 
 	/**
 	 * Whether given contained is fully inside the container.
@@ -86,4 +91,14 @@ public class GeneralUtils {
 		return pathFinder.searchNodePathBeforeCommand(heuristic, request);
 	}
 
+	public static Array<GridPoint2> findAllNodesToTarget(final Entity enemy) {
+		Vector2 pos = characterDecal.get(enemy).getNodePosition(auxVector2_1);
+		Entity target = character.get(enemy).getTarget();
+		Vector2 targetPos = characterDecal.get(target).getNodePosition(auxVector2_2);
+		return findAllNodesBetweenNodes(pos, targetPos);
+	}
+
+	public static Array<GridPoint2> findAllNodesBetweenNodes(Vector2 source, Vector2 destination) {
+		return bresenham.line((int) source.x, (int) source.y, (int) destination.x, (int) destination.y);
+	}
 }

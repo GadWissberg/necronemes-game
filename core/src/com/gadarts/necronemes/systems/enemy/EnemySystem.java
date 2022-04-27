@@ -66,7 +66,6 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 	private final static Vector2 auxVector2_2 = new Vector2();
 	private static final float ENEMY_HALF_FOV_ANGLE = 75F;
 	private static final float MAX_SIGHT = 11;
-	private static final Bresenham2 bresenham = new Bresenham2();
 	private static final CalculatePathRequest request = new CalculatePathRequest();
 	private static final float RANGE_ATTACK_MIN_RADIUS = 1.7F;
 	private static final List<MapGraphNode> auxNodesList = new ArrayList<>();
@@ -243,7 +242,7 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 	}
 
 	private boolean checkIfWayIsClearToTarget(final Entity enemy) {
-		Array<GridPoint2> nodes = findAllNodesToTarget(enemy);
+		Array<GridPoint2> nodes = GeneralUtils.findAllNodesToTarget(enemy);
 		boolean blocked = checkIfFloorNodesBlockSightToTarget(enemy, nodes);
 		if (!blocked) {
 			blocked = checkIfFloorNodesContainsEnemy(nodes, enemy);
@@ -410,15 +409,10 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		return (dirToTarget - fromDeg + 360 + 180) % 360 - 180 + ((toDeg - dirToTarget + 360 + 180) % 360 - 180) < 180;
 	}
 
-	private Array<GridPoint2> findAllNodesToTarget(final Entity enemy) {
-		Vector2 pos = characterDecal.get(enemy).getNodePosition(auxVector2_1);
-		Entity target = character.get(enemy).getTarget();
-		Vector2 targetPos = characterDecal.get(target).getNodePosition(auxVector2_2);
-		return bresenham.line((int) pos.x, (int) pos.y, (int) targetPos.x, (int) targetPos.y);
-	}
+
 
 	private boolean checkIfFloorNodesBlockSightToTarget(final Entity enemy) {
-		return checkIfFloorNodesBlockSightToTarget(enemy, findAllNodesToTarget(enemy));
+		return checkIfFloorNodesBlockSightToTarget(enemy, GeneralUtils.findAllNodesToTarget(enemy));
 	}
 
 	private boolean checkIfFloorNodesBlockSightToTarget(final Entity enemy, final Array<GridPoint2> nodes) {
