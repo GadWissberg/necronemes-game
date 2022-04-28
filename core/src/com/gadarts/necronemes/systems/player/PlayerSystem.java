@@ -5,7 +5,6 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -24,6 +23,7 @@ import com.gadarts.necronemes.components.character.CharacterAnimation;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.character.CharacterSpriteData;
+import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.Item;
@@ -51,6 +51,8 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		UserInterfaceSystemEventsSubscriber,
 		CharacterSystemEventsSubscriber,
 		RenderSystemEventsSubscriber {
+	public static final float LOS_MAX = 8F;
+	public static final int LOS_CHECK_DELTA = 5;
 	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final Vector2 auxVector2_2 = new Vector2();
 	private static final Vector2 auxVector2_3 = new Vector2();
@@ -70,30 +72,75 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	public void onCharacterNodeChanged(Entity entity, MapGraphNode oldNode, MapGraphNode newNode) {
 		if (player.has(entity)) {
 			MapGraph map = getSystemsCommonData().getMap();
-			Vector3 playerPosition = characterDecal.get(entity).getNodePosition(auxVector3);
-			MapGraphNode playerNode = map.getNode(playerPosition);
-			for (int dir = 0; dir < 360; dir += 5) {
-				Vector2 maxSight = auxVector2_2.set(playerPosition.x, playerPosition.z).add(auxVector2_3.set(1, 0).setAngleDeg(dir).nor().scl(8F));
-				Array<GridPoint2> nodes = GeneralUtils.findAllNodesBetweenNodes(auxVector2_1.set(playerPosition.x, playerPosition.z), maxSight);
-				boolean blocked = false;
-				for (GridPoint2 nodeCoord : nodes) {
-					MapGraphNode currentNode = map.getNode(nodeCoord.x, nodeCoord.y);
-					if (currentNode.getEntity() != null) {
-						ModelInstanceComponent modelInstanceComponent = modelInstance.get(currentNode.getEntity());
-						if (!blocked) {
-							if (playerNode.getHeight() + PlayerComponent.PLAYER_HEIGHT < currentNode.getHeight()) {
-								modelInstanceComponent.setVisible(true);
-								blocked = true;
-							} else {
-								modelInstanceComponent.setVisible(true);
-							}
-						} else {
-							modelInstanceComponent.setVisible(false);
-						}
-					}
+			Vector3 playerPos = characterDecal.get(entity).getNodePosition(auxVector3);
+			MapGraphNode playerNode = map.getNode(playerPos);
+			for (int dir = 0; dir < 360; dir += LOS_CHECK_DELTA) {
+				revealNodes(map, playerPos, playerNode, dir);
+			}
+			calculateFogOfWarForNearbyNodes(newNode, map);
+		}
+	}
+
+	private void calculateFogOfWarForNearbyNodes(MapGraphNode newNode, MapGraph map) {
+		int newNodeRow = newNode.getRow();
+		int newNodeCol = newNode.getCol();
+		float half = LOS_MAX / 4;
+		for (int row = (int) (newNodeRow - half); row < newNodeRow + half; row++) {
+			for (int col = (int) (newNodeCol - half); col < newNodeCol + half; col++) {
+				if (row != 0 || col != 0) {
+					calculateFogOfWarForNearbyNodes(map.getNode(col, row).getEntity());
 				}
 			}
 		}
+	}
+
+	private void calculateFogOfWarForNearbyNodes(Entity entity) {
+		if (entity == null) return;
+		int total = 0;
+		FloorComponent floorComponent = floor.get(entity);
+		for (Direction direction : Direction.values()) {
+			Vector2 vector = direction.getDirection(auxVector2_1);
+			total = calculateFogOfWarForNode(entity, total, (int) vector.x, (int) vector.y, direction.getMask());
+		}
+		floorComponent.setFogOfWarSignature(total);
+	}
+
+	private int calculateFogOfWarForNode(Entity entity, int total, int colOffset, int rowOffset, int mask) {
+		MapGraphNode node = floor.get(entity).getNode();
+		MapGraph map = getSystemsCommonData().getMap();
+		MapGraphNode nearbyNode = map.getNode(node.getCol() + colOffset, node.getRow() + rowOffset);
+		boolean result = false;
+		if (nearbyNode != null) {
+			result = modelInstance.get(entity).isVisible();
+		}
+		total |= result ? mask : 0;
+		return total;
+	}
+
+	private void revealNodes(MapGraph map, Vector3 src, MapGraphNode playerNode, int dir) {
+		Vector2 maxSight = auxVector2_2.set(src.x, src.z)
+				.add(auxVector2_3.set(1, 0)
+						.setAngleDeg(dir).nor()
+						.scl(LOS_MAX));
+		Array<GridPoint2> nodes = GeneralUtils.findAllNodesBetweenNodes(auxVector2_1.set(src.x, src.z), maxSight);
+		boolean blocked = false;
+		for (GridPoint2 nodeCoord : nodes) {
+			blocked = applyLineOfSightOnNode(map, playerNode, blocked, nodeCoord);
+		}
+	}
+
+	private boolean applyLineOfSightOnNode(MapGraph map, MapGraphNode playerNode, boolean blocked, GridPoint2 nodeCoord) {
+		MapGraphNode currentNode = map.getNode(nodeCoord.x, nodeCoord.y);
+		if (currentNode != null && currentNode.getEntity() != null) {
+			ModelInstanceComponent modelInstanceComponent = modelInstance.get(currentNode.getEntity());
+			modelInstanceComponent.setVisible(!blocked);
+			if (!blocked) {
+				if (playerNode.getHeight() + PlayerComponent.PLAYER_HEIGHT < currentNode.getHeight()) {
+					blocked = true;
+				}
+			}
+		}
+		return blocked;
 	}
 
 
@@ -346,12 +393,12 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public Class<PlayerSystemEventsSubscriber> getEventsSubscriberClass( ) {
+	public Class<PlayerSystemEventsSubscriber> getEventsSubscriberClass() {
 		return PlayerSystemEventsSubscriber.class;
 	}
 
 	@Override
-	public void initializeData( ) {
+	public void initializeData() {
 		playerPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());
 		playerPathPlanner.init((PooledEngine) getEngine());
 		if (!getLifeCycleHandler().isInGame()) {
@@ -373,7 +420,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		getSystemsCommonData().getStorage().setSelectedWeapon(weapon);
 	}
 
-	private Weapon initializeStartingWeapon( ) {
+	private Weapon initializeStartingWeapon() {
 		Weapon weapon = Pools.obtain(Weapon.class);
 		Texture image = getAssetsManager().getTexture(DefaultGameSettings.STARTING_WEAPON.getImage());
 		weapon.init(DefaultGameSettings.STARTING_WEAPON, 0, 0, image);
@@ -381,7 +428,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void dispose( ) {
+	public void dispose() {
 		getSystemsCommonData().getStorage().clear();
 	}
 }

@@ -14,12 +14,10 @@ import com.badlogic.gdx.utils.Array;
 import com.gadarts.necromine.model.Coords;
 import com.gadarts.necromine.model.map.MapNodesTypes;
 import com.gadarts.necronemes.components.ComponentsMapper;
-import com.gadarts.necronemes.components.FloorComponent;
 import com.gadarts.necronemes.components.ObstacleComponent;
 import com.gadarts.necronemes.components.PickUpComponent;
 import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.enemy.EnemyComponent;
-import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.utils.GeneralUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -147,19 +145,19 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	}
 
 	public MapGraphNode getNode(final int col, final int row) {
-		int index = Math.max(Math.min(row, mapSize.height) * mapSize.width + Math.min(col, mapSize.width - 1), 0);
+		int index = row * mapSize.width + Math.min(col, mapSize.width - 1);
 		MapGraphNode result = null;
-		if (index < getWidth() * getDepth()) {
+		if (0 <= index && index < getWidth() * getDepth()) {
 			result = nodes.get(index);
 		}
 		return result;
 	}
 
-	public int getDepth( ) {
+	public int getDepth() {
 		return mapSize.height;
 	}
 
-	public int getWidth( ) {
+	public int getWidth() {
 		return mapSize.width;
 	}
 
@@ -173,7 +171,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	}
 
 	@Override
-	public int getNodeCount( ) {
+	public int getNodeCount() {
 		return nodes.size;
 	}
 
@@ -302,7 +300,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		}
 	}
 
-	void applyConnections( ) {
+	void applyConnections() {
 		for (int row = 0; row < mapSize.height; row++) {
 			int rows = row * mapSize.width;
 			for (int col = 0; col < mapSize.width; col++) {
@@ -319,7 +317,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		}
 	}
 
-	public void init( ) {
+	public void init() {
 		applyConnections();
 	}
 

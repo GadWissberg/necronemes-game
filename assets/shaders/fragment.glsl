@@ -116,6 +116,7 @@ uniform int u_numberOfNearbyCharacters;
 uniform int u_floorAmbientOcclusion;
 uniform int u_isWall;
 uniform sampler2D u_shadows;
+uniform vec3 u_flatColor;
 
 //
 
@@ -167,90 +168,94 @@ void main() {
     gl_FragColor.rgb = (diffuse.rgb * (v_ambientLight + v_lightDiffuse)) + emissive.rgb;
     #else
     gl_FragColor.rgb = vec3(0.0);
-    if (u_affectedByLight != 0.0){
-        if (u_numberOfShadowlessLights > 0) {
-            for (int i = 0; i< u_numberOfShadowlessLights; i++){
-                vec3 light = u_shadowlessLightsPositions[i];
-                vec3 sub = light.xyz - v_frag_pos.xyz;
-                vec3 lightDir = normalize(sub);
-                float distance = length(sub);
-                vec3 extra = u_shadowlessLightsExtraData[i];
-                if (distance <= extra.y){
-                    int light_color_index = int(extra.z);
-                    vec3 light_color;
-                    if (light_color_index > -1){
-                        light_color = vec3(u_shadowlessLightsColors[light_color_index]);
-                    } else {
-                        light_color = vec3(1.0);
+    if (u_flatColor.x < 0){
+        if (u_affectedByLight != 0.0){
+            if (u_numberOfShadowlessLights > 0) {
+                for (int i = 0; i< u_numberOfShadowlessLights; i++){
+                    vec3 light = u_shadowlessLightsPositions[i];
+                    vec3 sub = light.xyz - v_frag_pos.xyz;
+                    vec3 lightDir = normalize(sub);
+                    float distance = length(sub);
+                    vec3 extra = u_shadowlessLightsExtraData[i];
+                    if (distance <= extra.y){
+                        int light_color_index = int(extra.z);
+                        vec3 light_color;
+                        if (light_color_index > -1){
+                            light_color = vec3(u_shadowlessLightsColors[light_color_index]);
+                        } else {
+                            light_color = vec3(1.0);
+                        }
+                        float attenuation = 4.0 * extra.x / (1.0 + (0.01*distance) + (0.9*distance*distance));
+                        float dot_value = dot(v_normal, lightDir);
+                        float intensity = max(dot_value, 0.0);
+                        vec3 value_to_add = (diffuse.rgb *light_color.rgb* (attenuation * intensity));
+                        value_to_add *= distance > (extra.y*5.0/6.0) ? 0.5 : 1.0;
+                        gl_FragColor.rgb += value_to_add;
                     }
-                    float attenuation = 4.0 * extra.x / (1.0 + (0.01*distance) + (0.9*distance*distance));
-                    float dot_value = dot(v_normal, lightDir);
-                    float intensity = max(dot_value, 0.0);
-                    vec3 value_to_add = (diffuse.rgb *light_color.rgb* (attenuation * intensity));
-                    value_to_add *= distance > (extra.y*5.0/6.0) ? 0.5 : 1.0;
-                    gl_FragColor.rgb += value_to_add;
+                }
+                gl_FragColor.rgb += emissive.rgb;
+            }
+            gl_FragColor.rgb += (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
+            vec2 c= gl_FragCoord.xy;
+            c.x/=u_screenWidth;
+            c.y/=u_screenHeight;
+            vec4 color=texture2D(u_shadows, c);
+            color.rgba *= color.a*5.0;
+            gl_FragColor.rgb+=vec3(gl_FragColor.r*color.a, gl_FragColor.g*color.a, gl_FragColor.b*color.a);
+
+            float minDistToChar = 21390950.0;
+            for (int i = 0; i< u_numberOfNearbyCharacters; i++){
+                vec2 sub = u_nearbyCharactersPositions[i].xy - v_frag_pos.xz;
+                float distance = length(sub);
+                if (distance < minDistToChar){
+                    minDistToChar = distance;
                 }
             }
-            gl_FragColor.rgb += emissive.rgb;
-        }
-        gl_FragColor.rgb += (diffuse.rgb * v_lightDiffuse) + emissive.rgb;
-        vec2 c= gl_FragCoord.xy;
-        c.x/=u_screenWidth;
-        c.y/=u_screenHeight;
-        vec4 color=texture2D(u_shadows, c);
-        color.rgba *= color.a*5.0;
-        gl_FragColor.rgb+=vec3(gl_FragColor.r*color.a,gl_FragColor.g*color.a, gl_FragColor.b*color.a);
 
-        float minDistToChar = 21390950.0;
-        for (int i = 0; i< u_numberOfNearbyCharacters; i++){
-            vec2 sub = u_nearbyCharactersPositions[i].xy - v_frag_pos.xz;
-            float distance = length(sub);
-            if (distance < minDistToChar){
-                minDistToChar = distance;
+            const float SHADOW_RADIUS = 0.25;
+            const float SHADOW_MAX_OPACITY = 0.2;
+            if (minDistToChar < SHADOW_RADIUS){
+                gl_FragColor.rgb*=1.0 - min(SHADOW_MAX_OPACITY, 1.0/(1.0 + minDistToChar));
             }
-        }
 
-        const float SHADOW_RADIUS = 0.25;
-        const float SHADOW_MAX_OPACITY = 0.2;
-        if (minDistToChar < SHADOW_RADIUS){
-            gl_FragColor.rgb*=1.0 - min(SHADOW_MAX_OPACITY, 1.0/(1.0 + minDistToChar));
+            if (u_floorAmbientOcclusion > 0){
+                const float AO_STRENGTH = 1.0;
+                const float FLOOR_DIAG_AO_STRENGTH = AO_STRENGTH*2.0;
+                if ((u_floorAmbientOcclusion & 1) == 1){ // South-East
+                    gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 2) == 2){ // South
+                    gl_FragColor.rgb *= 1.0 - max(v_frag_pos.z - u_modelZ, 0.0)*AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 4) == 4){ // South-West
+                    gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 8) == 8){ // East
+                    gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 32) == 32){ // West
+                    gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 64) == 64){ // North-East
+                    gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(u_modelZ - v_frag_pos.z, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 128) == 128){ // North
+                    gl_FragColor.rgb *= 1.0 - max(u_modelZ - v_frag_pos.z, 0.0)*AO_STRENGTH;
+                }
+                if ((u_floorAmbientOcclusion & 256) == 256){ // North-West
+                    gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*max(u_modelZ - v_frag_pos.z, 0.0)*FLOOR_DIAG_AO_STRENGTH;
+                }
+            } else if (u_isWall == 1){
+                const float WALL_AO_MAX_HEIGHT = 0.5;
+                const float WALL_AO_STRENGTH = 0.55;
+                gl_FragColor.rgb *= 1.0 - max(WALL_AO_MAX_HEIGHT - v_frag_pos.y - u_modelY, 0.0)*WALL_AO_STRENGTH;
+                gl_FragColor.rgb *= 1.0 - max(WALL_AO_MAX_HEIGHT - (u_modelHeight - v_frag_pos.y), 0.0)*WALL_AO_STRENGTH;
+            }
+        } else {
+            gl_FragColor.rgb = diffuse.rgb;
         }
-
-        if (u_floorAmbientOcclusion > 0){
-            const float AO_STRENGTH = 0.25;
-            const float FLOOR_DIAG_AO_STRENGTH = AO_STRENGTH*2.0;
-            if ((u_floorAmbientOcclusion & 1) == 1){ // South-East
-                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*FLOOR_DIAG_AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 2) == 2){ // South
-                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.z - u_modelZ, 0.0)*AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 4) == 4){ // South-West
-                gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*max(v_frag_pos.z - u_modelZ, 0.0)*FLOOR_DIAG_AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 8) == 8){ // East
-                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 32) == 32){ // West
-                gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 64) == 64){ // North-East
-                gl_FragColor.rgb *= 1.0 - max(v_frag_pos.x - u_modelX, 0.0)*max(u_modelZ - v_frag_pos.z, 0.0)*FLOOR_DIAG_AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 128) == 128){ // North
-                gl_FragColor.rgb *= 1.0 - max(u_modelZ - v_frag_pos.z, 0.0)*AO_STRENGTH;
-            }
-            if ((u_floorAmbientOcclusion & 256) == 256){ // North-West
-                gl_FragColor.rgb *= 1.0 - max(u_modelX - v_frag_pos.x, 0.0)*max(u_modelZ - v_frag_pos.z, 0.0)*FLOOR_DIAG_AO_STRENGTH;
-            }
-        } else if (u_isWall == 1){
-            const float WALL_AO_MAX_HEIGHT = 0.5;
-            const float WALL_AO_STRENGTH = 0.55;
-            gl_FragColor.rgb *= 1.0 - max(WALL_AO_MAX_HEIGHT - v_frag_pos.y - u_modelY,0.0)*WALL_AO_STRENGTH;
-            gl_FragColor.rgb *= 1.0 - max(WALL_AO_MAX_HEIGHT - (u_modelHeight - v_frag_pos.y),0.0)*WALL_AO_STRENGTH;
-        }
-    } else {
-        gl_FragColor.rgb = diffuse.rgb;
+    }else{
+        gl_FragColor.rgb = u_flatColor;
     }
     #endif
     #else

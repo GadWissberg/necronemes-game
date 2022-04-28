@@ -9,10 +9,11 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.gadarts.necronemes.components.ComponentsMapper;
-import com.gadarts.necronemes.components.FloorComponent;
+import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.ShadowlessLightComponent;
 import com.gadarts.necronemes.components.mi.AdditionalRenderData;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
+import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 
 import java.util.List;
 
@@ -29,6 +30,7 @@ public class ModelsShader extends DefaultShader {
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_POSITIONS = "u_shadowlessLightsPositions[0]";
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA = "u_shadowlessLightsExtraData[0]";
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_COLORS = "u_shadowlessLightsColors[0]";
+	private static final String UNIFORM_FLAT_COLOR = "u_flatColor";
 	private static final String UNIFORM_MODEL_WIDTH = "u_modelWidth";
 	private static final String UNIFORM_MODEL_HEIGHT = "u_modelHeight";
 	private static final String UNIFORM_MODEL_DEPTH = "u_modelDepth";
@@ -36,9 +38,9 @@ public class ModelsShader extends DefaultShader {
 	private static final String UNIFORM_MODEL_Y = "u_modelY";
 	private static final String UNIFORM_MODEL_Z = "u_modelZ";
 	private static final int MAX_LIGHTS = 16;
-	private final static Vector3 auxVector = new Vector3();
+	private static final Vector3 auxVector = new Vector3();
 	private static final int LIGHT_EXTRA_DATA_SIZE = 3;
-	private final static Color auxColor = new Color();
+	private static final Color auxColor = new Color();
 	private static final int MAX_NEARBY_CHARACTERS = 2;
 	private static final BoundingBox auxBoundingBox = new BoundingBox();
 	private final float[] lightsPositions = new float[MAX_LIGHTS * 3];
@@ -61,6 +63,7 @@ public class ModelsShader extends DefaultShader {
 	private int uniformLocModelY;
 	private int uniformLocModelZ;
 	private int uniformLocIsWall;
+	private int uniformLocFlatColor;
 
 	public ModelsShader(Renderable renderable, Config mainShaderConfig, FrameBuffer shadowFrameBuffer) {
 		super(renderable, mainShaderConfig);
@@ -68,7 +71,7 @@ public class ModelsShader extends DefaultShader {
 	}
 
 	@Override
-	public void init( ) {
+	public void init() {
 		super.init();
 		final int textureNum = 30;
 		shadowFrameBuffer.getColorBufferTexture().bind(textureNum);
@@ -91,8 +94,9 @@ public class ModelsShader extends DefaultShader {
 		uniformLocShadowlessLightsPositions = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_POSITIONS);
 		uniformLocShadowlessLightsExtraData = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA);
 		uniformLocShadowlessLightsColors = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_COLORS);
+		uniformLocFlatColor = program.getUniformLocation(UNIFORM_FLAT_COLOR);
 		if (program.getLog().length() != 0) {
-			System.out.println(program.getLog());
+			Gdx.app.log("Shader Compilation:", program.getLog());
 		}
 	}
 
@@ -158,14 +162,25 @@ public class ModelsShader extends DefaultShader {
 
 	@Override
 	public void render(Renderable renderable) {
-		Entity userData = (Entity) renderable.userData;
-		GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(userData).getModelInstance();
-		AdditionalRenderData additionalRenderData = modelInstance.getAdditionalRenderData();
+		ModelInstanceComponent modelInstanceComponent = modelInstance.get((Entity) renderable.userData);
+		AdditionalRenderData additionalRenderData = modelInstanceComponent.getModelInstance().getAdditionalRenderData();
 		applyLights(additionalRenderData);
 		program.setUniformf(uniformLocAffectedByLight, additionalRenderData.isAffectedByLight() ? 1F : 0F);
-		insertModelDimensions(additionalRenderData, userData);
+		insertModelDimensions(additionalRenderData, (Entity) renderable.userData);
 		insertDataForSpecificModels(renderable);
+		insertFlatColor(modelInstanceComponent);
 		super.render(renderable);
+	}
+
+	private void insertFlatColor(ModelInstanceComponent modelInstanceComponent) {
+		Color flatColor = modelInstanceComponent.getFlatColor();
+		Vector3 flatColorVector;
+		if (flatColor != null) {
+			flatColorVector = auxVector.set(flatColor.r, flatColor.g, flatColor.b);
+		} else {
+			flatColorVector = auxVector.set(-1F, -1F, -1F);
+		}
+		program.setUniformf(uniformLocFlatColor, flatColorVector);
 	}
 
 	private void insertDataForSpecificModels(Renderable renderable) {
@@ -203,7 +218,7 @@ public class ModelsShader extends DefaultShader {
 		float y;
 		if (!wall.has(entity)) {
 			y = translation.y;
-		}else {
+		} else {
 			y = wall.get(entity).getParentNode().getHeight();
 		}
 		program.setUniformf(uniformLocModelY, y);

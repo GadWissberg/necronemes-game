@@ -5,6 +5,7 @@ import com.gadarts.necronemes.components.animation.AnimationComponent;
 import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.CharacterComponent;
 import com.gadarts.necronemes.components.enemy.EnemyComponent;
+import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.PlayerComponent;
 import com.gadarts.necronemes.components.sd.SimpleDecalComponent;

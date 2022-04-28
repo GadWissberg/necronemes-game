@@ -17,7 +17,6 @@ import com.gadarts.necromine.model.characters.Direction;
 import com.gadarts.necromine.model.characters.SpriteType;
 import com.gadarts.necromine.model.characters.enemies.Enemies;
 import com.gadarts.necromine.model.env.EnvironmentDefinitions;
-import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necromine.model.pickups.ItemDefinition;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.components.*;
@@ -26,6 +25,7 @@ import com.gadarts.necronemes.components.cd.CharacterDecalComponent;
 import com.gadarts.necronemes.components.character.*;
 import com.gadarts.necronemes.components.collision.CollisionComponent;
 import com.gadarts.necronemes.components.enemy.EnemyComponent;
+import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 import com.gadarts.necronemes.components.player.Item;
@@ -173,7 +173,7 @@ public class EntityBuilder {
 		return instance;
 	}
 
-	public EntityBuilder addWallComponent(final MapNodeData parentNode) {
+	public EntityBuilder addWallComponent(final MapGraphNode parentNode) {
 		if (engine == null) throw new RuntimeException(MSG_FAIL_CALL_BEGIN_BUILDING_ENTITY_FIRST);
 		WallComponent component = engine.createComponent(WallComponent.class);
 		component.init(parentNode);

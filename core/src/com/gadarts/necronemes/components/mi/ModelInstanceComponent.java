@@ -1,5 +1,6 @@
 package com.gadarts.necronemes.components.mi;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.math.Vector3;
 import com.gadarts.necronemes.components.GameComponent;
@@ -16,6 +17,9 @@ public class ModelInstanceComponent implements GameComponent {
 
 	private GameModelInstance modelInstance;
 	private ColorAttribute colorAttribute;
+
+	@Setter
+	private Color flatColor;
 	private boolean castShadow;
 
 	public void init(final GameModelInstance modelInstance,
@@ -27,7 +31,7 @@ public class ModelInstanceComponent implements GameComponent {
 		this.castShadow = castShadow;
 	}
 
-	public ColorAttribute getColorAttribute( ) {
+	public ColorAttribute getColorAttribute() {
 		if (colorAttribute == null) {
 			colorAttribute = modelInstance.materials.get(0).get(ColorAttribute.class, ColorAttribute.Diffuse);
 		}
@@ -35,7 +39,7 @@ public class ModelInstanceComponent implements GameComponent {
 	}
 
 	@Override
-	public void reset( ) {
+	public void reset() {
 		modelInstance = null;
 	}
 

@@ -45,7 +45,7 @@ import com.gadarts.necromine.model.map.Wall;
 import com.gadarts.necromine.model.pickups.WeaponsDefinitions;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.components.ComponentsMapper;
-import com.gadarts.necronemes.components.FloorComponent;
+import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.character.CharacterAnimations;
 import com.gadarts.necronemes.components.character.CharacterData;
 import com.gadarts.necronemes.components.character.CharacterSkillsParameters;
@@ -145,7 +145,7 @@ public class MapBuilder implements Disposable {
 		floorModel = createFloorModel();
 	}
 
-	private Model createFloorModel( ) {
+	private Model createFloorModel() {
 		ModelBuilder modelBuilder = new ModelBuilder();
 		modelBuilder.begin();
 		MeshPartBuilder meshPartBuilder = modelBuilder.part("floor",
@@ -227,40 +227,13 @@ public class MapBuilder implements Disposable {
 
 	private void calculateNodesAmbientOcclusionValue(MapGraph mapGraph) {
 		mapGraph.getNodes().forEach(node -> {
-			int row = node.getRow();
-			int col = node.getCol();
 			int nodeAmbientOcclusionValue = 0;
-			int westCol = col - 1;
 			float height = node.getHeight();
-			int eastCol = col + 1;
-			if (row > 0) {
-				int northRow = row - 1;
-				if (col > 0 && mapGraph.getNode(westCol,northRow).getHeight() > height) {
-					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH_WEST;
-				}
-				if (mapGraph.getNode(col, northRow).getHeight() > height) {
-					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH;
-				}
-				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(eastCol, northRow).getHeight() > height) {
-					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_NORTH_EAST;
-				}
-			}
-			if (col > 0 && mapGraph.getNode(westCol, row).getHeight() > height) {
-				nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_WEST;
-			}
-			if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(eastCol, row).getHeight() > height) {
-				nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_EAST;
-			}
-			if (row < mapGraph.getDepth() - 1) {
-				int southRow = row + 1;
-				if (col > 0 && mapGraph.getNode(westCol,southRow).getHeight() > height) {
-					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH_WEST;
-				}
-				if (mapGraph.getNode(col, southRow).getHeight() > height) {
-					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH;
-				}
-				if (col < mapGraph.getWidth() - 1 && mapGraph.getNode(eastCol, southRow).getHeight() > height) {
-					nodeAmbientOcclusionValue |= MapGraphNode.AMBIENT_OCCLUSION_VALUE_SOUTH_EAST;
+			for (Direction direction : Direction.values()) {
+				Vector2 vec = direction.getDirection(auxVector2_1);
+				MapGraphNode nearbyNode = mapGraph.getNode((int) (node.getCol() + vec.x), (int) (node.getRow() + vec.y));
+				if (nearbyNode != null && nearbyNode.getHeight() > height) {
+					nodeAmbientOcclusionValue |= direction.getMask();
 				}
 			}
 			node.setNodeAmbientOcclusionValue(nodeAmbientOcclusionValue);
@@ -291,7 +264,7 @@ public class MapBuilder implements Disposable {
 				float vOffset = asJsonObject.has(V_OFFSET) ? asJsonObject.get(V_OFFSET).getAsFloat() : 0;
 				WallCreator.adjustWallBetweenEastAndWest(eastNode, nodeData, vScale, hOffset, vOffset);
 				boolean westHigherThanEast = node.getHeight() > eastNode.getHeight();
-				inflateWall(walls.getEastWall(), westHigherThanEast ? eastNode : nodeData);
+				inflateWall(walls.getEastWall(), westHigherThanEast ? eastNode : nodeData, mapGraph);
 			}
 		}
 	}
@@ -319,7 +292,7 @@ public class MapBuilder implements Disposable {
 				float vOffset = asJsonObject.has(V_OFFSET) ? asJsonObject.get(V_OFFSET).getAsFloat() : 0;
 				WallCreator.adjustWallBetweenNorthAndSouth(n, northNode, vScale, hOffset, vOffset);
 				boolean northHigherThanSouth = node.getHeight() > northNode.getHeight();
-				inflateWall(n.getWalls().getNorthWall(), northHigherThanSouth ? northNode : n);
+				inflateWall(n.getWalls().getNorthWall(), northHigherThanSouth ? northNode : n, mapGraph);
 			}
 		}
 	}
@@ -338,13 +311,13 @@ public class MapBuilder implements Disposable {
 		bBox.ext(center);
 	}
 
-	private void inflateWall(final Wall wall, final MapNodeData parentNode) {
+	private void inflateWall(Wall wall, MapNodeData parentNodeData, MapGraph mapGraph) {
 		BoundingBox bBox = wall.getModelInstance().calculateBoundingBox(new BoundingBox());
 		avoidZeroDimensions(bBox);
 		bBox.mul(auxMatrix.set(wall.getModelInstance().transform).setTranslation(Vector3.Zero));
 		GameModelInstance modelInstance = new GameModelInstance(wall.getModelInstance(), bBox, true, Color.WHITE);
 		beginBuildingEntity(engine).addModelInstanceComponent(modelInstance, true, false)
-				.addWallComponent(parentNode)
+				.addWallComponent(mapGraph.getNode(parentNodeData.getCoords()))
 				.finishAndAddToEngine();
 	}
 
@@ -382,7 +355,7 @@ public class MapBuilder implements Disposable {
 				float vOffset = asJsonObject.has(V_OFFSET) ? asJsonObject.get(V_OFFSET).getAsFloat() : 0;
 				WallCreator.adjustWallBetweenEastAndWest(nodeData, westNodeData, vScale, hOffset, vOffset);
 				boolean eastHigherThanWest = node.getHeight() > westNodeData.getHeight();
-				inflateWall(walls.getWestWall(), eastHigherThanWest ? westNodeData : nodeData);
+				inflateWall(walls.getWestWall(), eastHigherThanWest ? westNodeData : nodeData, mapGraph);
 			}
 		}
 	}
@@ -411,7 +384,7 @@ public class MapBuilder implements Disposable {
 				float vOffset = asJsonObject.has(V_OFFSET) ? asJsonObject.get(V_OFFSET).getAsFloat() : 0;
 				WallCreator.adjustWallBetweenNorthAndSouth(southNode, nodeData, vScale, hOffset, vOffset);
 				boolean northHigherThanSouth = node.getHeight() > southNode.getHeight();
-				inflateWall(walls.getSouthWall(), northHigherThanSouth ? southNode : nodeData);
+				inflateWall(walls.getSouthWall(), northHigherThanSouth ? southNode : nodeData, mapGraph);
 			}
 		}
 	}
@@ -755,7 +728,7 @@ public class MapBuilder implements Disposable {
 		mi.getAdditionalRenderData().setColorWhenOutside(Color.WHITE);
 	}
 
-	private Material createFloorMaterial( ) {
+	private Material createFloorMaterial() {
 		Material material = new Material();
 		material.id = "floor_test";
 		return material;

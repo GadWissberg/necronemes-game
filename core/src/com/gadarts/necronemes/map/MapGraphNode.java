@@ -13,14 +13,6 @@ import java.awt.*;
 
 @Getter
 public class MapGraphNode {
-	public static final int AMBIENT_OCCLUSION_VALUE_NORTH_WEST = 0B100000000;
-	public static final int AMBIENT_OCCLUSION_VALUE_NORTH = 0B010000000;
-	public static final int AMBIENT_OCCLUSION_VALUE_NORTH_EAST = 0B001000000;
-	public static final int AMBIENT_OCCLUSION_VALUE_WEST = 0B000100000;
-	public static final int AMBIENT_OCCLUSION_VALUE_EAST = 0B000001000;
-	public static final int AMBIENT_OCCLUSION_VALUE_SOUTH_WEST = 0B000000100;
-	public static final int AMBIENT_OCCLUSION_VALUE_SOUTH = 0B000000010;
-	public static final int AMBIENT_OCCLUSION_VALUE_SOUTH_EAST = 0B000000001;
 	private final Array<MapGraphConnection> connections;
 	private int col;
 	private int row;

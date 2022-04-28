@@ -1,18 +1,19 @@
 package com.gadarts.necronemes.components;
 
 import com.gadarts.necromine.model.map.MapNodeData;
+import com.gadarts.necronemes.map.MapGraphNode;
 import lombok.Getter;
 
 @Getter
 public class WallComponent implements GameComponent {
-	private MapNodeData parentNode;
+	private MapGraphNode parentNode;
 
-	public void init(final MapNodeData parentNode) {
+	public void init(final MapGraphNode parentNode) {
 		this.parentNode = parentNode;
 	}
 
 	@Override
-	public void reset( ) {
+	public void reset() {
 
 	}
 }
