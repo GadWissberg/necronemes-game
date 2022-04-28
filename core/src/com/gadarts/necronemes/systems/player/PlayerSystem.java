@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Vector2;
@@ -51,7 +52,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		UserInterfaceSystemEventsSubscriber,
 		CharacterSystemEventsSubscriber,
 		RenderSystemEventsSubscriber {
-	public static final float LOS_MAX = 8F;
+	public static final float LOS_MAX = 12F;
 	public static final int LOS_CHECK_DELTA = 5;
 	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final Vector2 auxVector2_2 = new Vector2();
@@ -71,30 +72,35 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	@Override
 	public void onCharacterNodeChanged(Entity entity, MapGraphNode oldNode, MapGraphNode newNode) {
 		if (player.has(entity)) {
-			MapGraph map = getSystemsCommonData().getMap();
-			Vector3 playerPos = characterDecal.get(entity).getNodePosition(auxVector3);
-			MapGraphNode playerNode = map.getNode(playerPos);
-			for (int dir = 0; dir < 360; dir += LOS_CHECK_DELTA) {
-				revealNodes(map, playerPos, playerNode, dir);
-			}
-			calculateFogOfWarForNearbyNodes(newNode, map);
+			refreshFogOfWar();
 		}
 	}
 
-	private void calculateFogOfWarForNearbyNodes(MapGraphNode newNode, MapGraph map) {
-		int newNodeRow = newNode.getRow();
-		int newNodeCol = newNode.getCol();
-		float half = LOS_MAX / 4;
-		for (int row = (int) (newNodeRow - half); row < newNodeRow + half; row++) {
-			for (int col = (int) (newNodeCol - half); col < newNodeCol + half; col++) {
-				if (row != 0 || col != 0) {
-					calculateFogOfWarForNearbyNodes(map.getNode(col, row).getEntity());
+	private void refreshFogOfWar( ) {
+		MapGraph map = getSystemsCommonData().getMap();
+		Vector3 playerPos = characterDecal.get(getSystemsCommonData().getPlayer()).getNodePosition(auxVector3);
+		MapGraphNode playerNode = map.getNode(playerPos);
+		for (int dir = 0; dir < 360; dir += LOS_CHECK_DELTA) {
+			revealNodes(map, playerPos, playerNode, dir);
+		}
+		calculateFogOfWarEdges(playerNode, map);
+	}
+
+	private void calculateFogOfWarEdges(MapGraphNode node, MapGraph map) {
+		int nodeRow = node.getRow();
+		int nodeCol = node.getCol();
+		float half = LOS_MAX / 2;
+		for (int row = (int) (nodeRow - half); row < nodeRow + half; row++) {
+			for (int col = (int) (nodeCol - half); col < nodeCol + half; col++) {
+				MapGraphNode nearbyNode = map.getNode(col, row);
+				if ((row != 0 || col != 0) && nearbyNode != null) {
+					calculateFogOfWarEdges(nearbyNode.getEntity());
 				}
 			}
 		}
 	}
 
-	private void calculateFogOfWarForNearbyNodes(Entity entity) {
+	private void calculateFogOfWarEdges(Entity entity) {
 		if (entity == null) return;
 		int total = 0;
 		FloorComponent floorComponent = floor.get(entity);
@@ -109,9 +115,9 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		MapGraphNode node = floor.get(entity).getNode();
 		MapGraph map = getSystemsCommonData().getMap();
 		MapGraphNode nearbyNode = map.getNode(node.getCol() + colOffset, node.getRow() + rowOffset);
-		boolean result = false;
-		if (nearbyNode != null) {
-			result = modelInstance.get(entity).isVisible();
+		boolean result = true;
+		if (nearbyNode != null && nearbyNode.getEntity() != null) {
+			result = modelInstance.get(nearbyNode.getEntity()).getFlatColor() != null;
 		}
 		total |= result ? mask : 0;
 		return total;
@@ -133,7 +139,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		MapGraphNode currentNode = map.getNode(nodeCoord.x, nodeCoord.y);
 		if (currentNode != null && currentNode.getEntity() != null) {
 			ModelInstanceComponent modelInstanceComponent = modelInstance.get(currentNode.getEntity());
-			modelInstanceComponent.setVisible(!blocked);
+			modelInstanceComponent.setFlatColor(blocked ? Color.BLACK : null);
 			if (!blocked) {
 				if (playerNode.getHeight() + PlayerComponent.PLAYER_HEIGHT < currentNode.getHeight()) {
 					blocked = true;
@@ -393,17 +399,18 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public Class<PlayerSystemEventsSubscriber> getEventsSubscriberClass() {
+	public Class<PlayerSystemEventsSubscriber> getEventsSubscriberClass( ) {
 		return PlayerSystemEventsSubscriber.class;
 	}
 
 	@Override
-	public void initializeData() {
+	public void initializeData( ) {
 		playerPathPlanner = new PathPlanHandler(getAssetsManager(), getSystemsCommonData().getMap());
 		playerPathPlanner.init((PooledEngine) getEngine());
 		if (!getLifeCycleHandler().isInGame()) {
 			changePlayerStatus(true);
 		}
+		refreshFogOfWar();
 	}
 
 	private void changePlayerStatus(final boolean disabled) {
@@ -420,7 +427,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		getSystemsCommonData().getStorage().setSelectedWeapon(weapon);
 	}
 
-	private Weapon initializeStartingWeapon() {
+	private Weapon initializeStartingWeapon( ) {
 		Weapon weapon = Pools.obtain(Weapon.class);
 		Texture image = getAssetsManager().getTexture(DefaultGameSettings.STARTING_WEAPON.getImage());
 		weapon.init(DefaultGameSettings.STARTING_WEAPON, 0, 0, image);
@@ -428,7 +435,7 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void dispose() {
+	public void dispose( ) {
 		getSystemsCommonData().getStorage().clear();
 	}
 }

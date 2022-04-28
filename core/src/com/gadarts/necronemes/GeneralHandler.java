@@ -153,6 +153,7 @@ public class GeneralHandler implements
 		generateCharactersAnimations();
 		applyAlphaOnModels();
 		generateModelsBoundingBoxes();
+		assetsManager.applyRepeatWrapOnAllTextures();
 	}
 
 	@SuppressWarnings("unchecked")

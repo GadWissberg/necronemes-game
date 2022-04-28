@@ -9,10 +9,9 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.gadarts.necronemes.components.ComponentsMapper;
-import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.ShadowlessLightComponent;
+import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.mi.AdditionalRenderData;
-import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.mi.ModelInstanceComponent;
 
 import java.util.List;
@@ -31,6 +30,7 @@ public class ModelsShader extends DefaultShader {
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA = "u_shadowlessLightsExtraData[0]";
 	private static final String UNIFORM_SHADOWLESS_LIGHTS_COLORS = "u_shadowlessLightsColors[0]";
 	private static final String UNIFORM_FLAT_COLOR = "u_flatColor";
+	private static final String UNIFORM_FOW_SIGNATURE = "u_fowSignature";
 	private static final String UNIFORM_MODEL_WIDTH = "u_modelWidth";
 	private static final String UNIFORM_MODEL_HEIGHT = "u_modelHeight";
 	private static final String UNIFORM_MODEL_DEPTH = "u_modelDepth";
@@ -64,6 +64,7 @@ public class ModelsShader extends DefaultShader {
 	private int uniformLocModelZ;
 	private int uniformLocIsWall;
 	private int uniformLocFlatColor;
+	private int uniformLocFowSignature;
 
 	public ModelsShader(Renderable renderable, Config mainShaderConfig, FrameBuffer shadowFrameBuffer) {
 		super(renderable, mainShaderConfig);
@@ -71,7 +72,7 @@ public class ModelsShader extends DefaultShader {
 	}
 
 	@Override
-	public void init() {
+	public void init( ) {
 		super.init();
 		final int textureNum = 30;
 		shadowFrameBuffer.getColorBufferTexture().bind(textureNum);
@@ -95,6 +96,7 @@ public class ModelsShader extends DefaultShader {
 		uniformLocShadowlessLightsExtraData = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_EXTRA_DATA);
 		uniformLocShadowlessLightsColors = program.getUniformLocation(UNIFORM_SHADOWLESS_LIGHTS_COLORS);
 		uniformLocFlatColor = program.getUniformLocation(UNIFORM_FLAT_COLOR);
+		uniformLocFowSignature = program.getUniformLocation(UNIFORM_FOW_SIGNATURE);
 		if (program.getLog().length() != 0) {
 			Gdx.app.log("Shader Compilation:", program.getLog());
 		}
@@ -232,9 +234,11 @@ public class ModelsShader extends DefaultShader {
 			initializeNearbyCharactersPositions(renderable, size);
 			program.setUniform2fv(uniformLocNearbyCharactersPositions, this.nearbyCharactersPositions, 0, size * 2);
 			program.setUniformi(uniformLocFloorAmbientOcclusion, floorComponent.getNode().getNodeAmbientOcclusionValue());
+			program.setUniformi(uniformLocFowSignature, floorComponent.getFogOfWarSignature());
 		} else {
 			program.setUniformi(uniformLocNumberOfNearbyCharacters, 0);
 			program.setUniformi(uniformLocFloorAmbientOcclusion, 0);
+			program.setUniformi(uniformLocFowSignature, 0);
 		}
 	}
 

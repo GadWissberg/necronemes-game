@@ -35,7 +35,6 @@ import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
 import com.gadarts.necronemes.components.ComponentsMapper;
-import com.gadarts.necronemes.components.floor.FloorComponent;
 import com.gadarts.necronemes.components.LightComponent;
 import com.gadarts.necronemes.components.ShadowlessLightComponent;
 import com.gadarts.necronemes.components.StaticLightComponent;
@@ -70,7 +69,6 @@ import java.util.List;
 
 import static com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 import static com.gadarts.necromine.assets.Assets.Shaders.*;
-import static com.gadarts.necromine.assets.Assets.Shaders.SHADOW_FRAGMENT;
 import static com.gadarts.necromine.model.characters.SpriteType.ATTACK_PRIMARY;
 import static com.gadarts.necronemes.components.ComponentsMapper.*;
 import static com.gadarts.necronemes.systems.SystemsCommonData.CAMERA_LIGHT_FAR;
@@ -82,7 +80,6 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	public static final float FLICKER_RANDOM_MIN = 0.95F;
 	public static final float FLICKER_RANDOM_MAX = 1.05F;
 	public static final int DEPTH_MAP_SIZE = 1024;
-	private static final Vector2 auxVector2_1 = new Vector2();
 	private static final Vector3 auxVector3_1 = new Vector3();
 	private static final Vector3 auxVector3_2 = new Vector3();
 	private static final Vector3 auxVector3_3 = new Vector3();
@@ -163,7 +160,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		}
 	}
 
-	private void createBatches() {
+	private void createBatches( ) {
 		this.modelBatch = new ModelBatch(shaderProvider);
 		this.spriteBatch = new SpriteBatch();
 		depthModelBatch = new ModelBatch(new DefaultShaderProvider() {
@@ -180,7 +177,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		});
 	}
 
-	private Environment createEnvironment() {
+	private Environment createEnvironment( ) {
 		final Environment environment;
 		environment = new Environment();
 		float ambient = getSystemsCommonData().getMap().getAmbient();
@@ -201,12 +198,12 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public Class<RenderSystemEventsSubscriber> getEventsSubscriberClass() {
+	public Class<RenderSystemEventsSubscriber> getEventsSubscriberClass( ) {
 		return RenderSystemEventsSubscriber.class;
 	}
 
 	@Override
-	public void initializeData() {
+	public void initializeData( ) {
 		modelInstanceEntities = getEngine().getEntitiesFor(Family.all(ModelInstanceComponent.class).get());
 		SystemsCommonData systemsCommonData = getSystemsCommonData();
 		GameAssetsManager assetsManager = getAssetsManager();
@@ -321,13 +318,12 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 			renderCharactersShadowsOnFloor(entity);
 		} else if (wall.has(entity)) {
 			ModelInstanceComponent modelInstanceComponent = modelInstance.get(entity);
-			if (!modelInstance.get(wall.get(entity).getParentNode().getEntity()).isVisible()) {
+			if (modelInstance.get(wall.get(entity).getParentNode().getEntity()).getFlatColor() != null) {
 				modelInstanceComponent.setFlatColor(Color.BLACK);
 			} else {
 				modelInstanceComponent.setFlatColor(null);
 			}
 		}
-
 	}
 
 	private void renderCharactersShadowsOnFloor(Entity entity) {
@@ -357,7 +353,15 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 				|| !isVisible(camera, entity)
 				|| floor.has(entity) && !drawFlags.isDrawGround()
 				|| obstacle.has(entity) && !drawFlags.isDrawEnv()
-				|| getSystemsCommonData().getCursor() == entity && !drawFlags.isDrawCursor();
+				|| getSystemsCommonData().getCursor() == entity && !drawFlags.isDrawCursor()
+				|| isInFow(entity, modelInstance.get(entity).getModelInstance().transform.getTranslation(auxVector3_1));
+	}
+
+	private boolean isInFow(Entity entity, Vector3 position) {
+		if (floor.has(entity) || wall.has(entity)) return false;
+		MapGraph map = getSystemsCommonData().getMap();
+		MapGraphNode node = map.getNode(position);
+		return node != null && node.getEntity() != null && modelInstance.get(node.getEntity()).getFlatColor() != null;
 	}
 
 	@Override
@@ -367,7 +371,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		render(deltaTime);
 	}
 
-	private void renderShadows() {
+	private void renderShadows( ) {
 		shadowFrameBuffer.begin();
 		Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
@@ -394,13 +398,13 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		renderSkillFlowersText();
 	}
 
-	private void renderParticleEffects() {
+	private void renderParticleEffects( ) {
 		modelBatch.begin(getSystemsCommonData().getCamera());
 		modelBatch.render(getSystemsCommonData().getParticleSystem(), environment);
 		modelBatch.end();
 	}
 
-	private void renderSkillFlowersText() {
+	private void renderSkillFlowersText( ) {
 		if (enemyEntities.size() > 0) {
 			spriteBatch.begin();
 			for (Entity enemy : enemyEntities) {
@@ -459,7 +463,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		Gdx.gl.glDepthMask(true);
 	}
 
-	private void renderSimpleDecals() {
+	private void renderSimpleDecals( ) {
 		for (Entity entity : simpleDecalsEntities) {
 			renderSimpleDecal(decalBatch, entity);
 		}
@@ -481,12 +485,12 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	}
 
 	private void renderSimpleDecal(final DecalBatch decalBatch, final Entity entity) {
-		SimpleDecalComponent simpleDecalComponent = simpleDecal.get(entity);
-		if (simpleDecalComponent != null && simpleDecalComponent.isVisible()) {
-			handleSimpleDecalAnimation(entity, simpleDecalComponent);
-			faceDecalToCamera(simpleDecalComponent, simpleDecalComponent.getDecal());
-			decalBatch.add(simpleDecalComponent.getDecal());
-			renderRelatedDecals(decalBatch, simpleDecalComponent);
+		SimpleDecalComponent component = simpleDecal.get(entity);
+		if (component != null && component.isVisible() && !isInFow(entity, component.getDecal().getPosition())) {
+			handleSimpleDecalAnimation(entity, component);
+			faceDecalToCamera(component, component.getDecal());
+			decalBatch.add(component.getDecal());
+			renderRelatedDecals(decalBatch, component);
 		}
 	}
 
@@ -582,7 +586,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		return minDistance;
 	}
 
-	private void createShadowMaps() {
+	private void createShadowMaps( ) {
 		PerspectiveCamera cameraLight = new PerspectiveCamera(90f, DEPTH_MAP_SIZE, DEPTH_MAP_SIZE);
 		cameraLight.near = 0.0001F;
 		cameraLight.far = CAMERA_LIGHT_FAR;
@@ -791,7 +795,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	}
 
 	@Override
-	public void dispose() {
+	public void dispose( ) {
 		skillFlowerFont.dispose();
 		depthShaderProgram.dispose();
 		decalBatch.dispose();
@@ -801,7 +805,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		disposeShadowRelated();
 	}
 
-	private void disposeShadowRelated() {
+	private void disposeShadowRelated( ) {
 		shadowsShaderProgram.dispose();
 		shadowFrameBuffer.dispose();
 		for (Entity light : staticLightsEntities) {
