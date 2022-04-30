@@ -43,12 +43,14 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	private final ImmutableArray<Entity> enemiesEntities;
 	private final ImmutableArray<Entity> characterEntities;
 	private final ImmutableArray<Entity> obstacleEntities;
-	private final PooledEngine engine;
 	@Setter(AccessLevel.PACKAGE)
 	@Getter(AccessLevel.PACKAGE)
 	MapGraphNode currentDestination;
 	@Setter
 	private MapGraphConnectionCosts maxConnectionCostInSearch;
+	@Setter(AccessLevel.PACKAGE)
+	@Getter(AccessLevel.PACKAGE)
+	private Entity currentCharacterPathPlanner;
 	@Setter
 	private boolean includeEnemiesInGetConnections = true;
 
@@ -65,7 +67,6 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 			}
 		}
 		this.pickupEntities = engine.getEntitiesFor(Family.all(PickUpComponent.class).get());
-		this.engine = engine;
 	}
 
 	public Entity getAliveEnemyFromNode(final MapGraphNode node) {
@@ -153,11 +154,11 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		return result;
 	}
 
-	public int getDepth() {
+	public int getDepth( ) {
 		return mapSize.height;
 	}
 
-	public int getWidth() {
+	public int getWidth( ) {
 		return mapSize.width;
 	}
 
@@ -171,7 +172,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	}
 
 	@Override
-	public int getNodeCount() {
+	public int getNodeCount( ) {
 		return nodes.size;
 	}
 
@@ -188,7 +189,8 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	public boolean checkIfNodeIsAvailable(final MapGraphNode destinationNode) {
 		for (Entity c : characterEntities) {
 			MapGraphNode node = getNode(ComponentsMapper.characterDecal.get(c).getNodePosition(auxVector2));
-			if (currentDestination == node || ComponentsMapper.character.get(c).getSkills().getHealthData().getHp() <= 0) {
+			int hp = ComponentsMapper.character.get(c).getSkills().getHealthData().getHp();
+			if (currentDestination == node || hp <= 0) {
 				continue;
 			}
 			if (node.equals(destinationNode)) {
@@ -196,6 +198,10 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 			}
 		}
 		return true;
+	}
+
+	private boolean isNodeRevealed(MapGraphNode node) {
+		return node.getEntity() != null && ComponentsMapper.modelInstance.get(node.getEntity()).getFlatColor() == null;
 	}
 
 	private void checkIfConnectionIsAvailable(final Connection<MapGraphNode> connection) {
@@ -242,6 +248,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 	}
 
 	private boolean checkIfConnectionPassable(final Connection<MapGraphNode> con) {
+		if (ComponentsMapper.player.has(currentCharacterPathPlanner) && !isNodeRevealed(con.getToNode())) return false;
 		MapGraphNode fromNode = con.getFromNode();
 		MapGraphNode toNode = con.getToNode();
 		boolean result = fromNode.getType() == MapNodesTypes.PASSABLE_NODE && toNode.getType() == MapNodesTypes.PASSABLE_NODE;
@@ -300,7 +307,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		}
 	}
 
-	void applyConnections() {
+	void applyConnections( ) {
 		for (int row = 0; row < mapSize.height; row++) {
 			int rows = row * mapSize.width;
 			for (int col = 0; col < mapSize.width; col++) {
@@ -317,7 +324,7 @@ public class MapGraph implements IndexedGraph<MapGraphNode> {
 		}
 	}
 
-	public void init() {
+	public void init( ) {
 		applyConnections();
 	}
 

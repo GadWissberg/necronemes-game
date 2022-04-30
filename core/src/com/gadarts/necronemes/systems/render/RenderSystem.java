@@ -358,7 +358,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 	}
 
 	private boolean isInFow(Entity entity, Vector3 position) {
-		if (floor.has(entity) || wall.has(entity)) return false;
+		if (floor.has(entity) || wall.has(entity) || entity == getSystemsCommonData().getCursor()) return false;
 		MapGraph map = getSystemsCommonData().getMap();
 		MapGraphNode node = map.getNode(position);
 		return node != null && node.getEntity() != null && modelInstance.get(node.getEntity()).getFlatColor() != null;
@@ -408,7 +408,7 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 		if (enemyEntities.size() > 0) {
 			spriteBatch.begin();
 			for (Entity enemy : enemyEntities) {
-				if (simpleDecal.has(enemy)) {
+				if (simpleDecal.has(enemy) && !isInFow(enemy, simpleDecal.get(enemy).getDecal().getPosition())) {
 					renderSkillFlowerInsideContent(enemy);
 				}
 			}
@@ -508,11 +508,17 @@ public class RenderSystem extends GameSystem<RenderSystemEventsSubscriber> imple
 
 	private void renderLiveCharacters(final float deltaTime) {
 		for (Entity entity : characterDecalsEntities) {
-			if (shouldRenderPlayer(entity) || shouldRenderEnemy(entity)) {
-				initializeCharacterDecalForRendering(deltaTime, entity);
+			Vector3 position = characterDecal.get(entity).getDecal().getPosition();
+			Entity floorEntity = getSystemsCommonData().getMap().getNode(position).getEntity();
+			initializeCharacterDecalForRendering(deltaTime, entity);
+			if (isNodeRevealed(floorEntity) && (shouldRenderPlayer(entity) || shouldRenderEnemy(entity))) {
 				renderCharacterDecal(entity);
 			}
 		}
+	}
+
+	private boolean isNodeRevealed(Entity floorEntity) {
+		return floorEntity != null && ComponentsMapper.modelInstance.get(floorEntity).getFlatColor() == null;
 	}
 
 	private boolean shouldRenderEnemy(Entity entity) {

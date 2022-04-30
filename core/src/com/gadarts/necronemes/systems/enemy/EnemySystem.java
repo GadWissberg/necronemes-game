@@ -151,12 +151,12 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 	public boolean calculatePathToCharacter(MapGraphNode sourceNode,
 											Entity character,
 											boolean avoidCharactersInCalculation,
-											MapGraphConnectionCosts maxCostPerNodeConnection) {
+											MapGraphConnectionCosts maxCostPerNodeConn) {
 		enemyPathPlanner.getCurrentPath().clear();
 		CharacterDecalComponent characterDecalComponent = characterDecal.get(character);
 		Vector2 cellPosition = characterDecalComponent.getNodePosition(auxVector2_1);
 		MapGraphNode destNode = getSystemsCommonData().getMap().getNode((int) cellPosition.x, (int) cellPosition.y);
-		initializePathPlanRequest(sourceNode, destNode, maxCostPerNodeConnection, avoidCharactersInCalculation);
+		initializePathPlanRequest(sourceNode, destNode, maxCostPerNodeConn, avoidCharactersInCalculation, character);
 		return enemyPathPlanner.getPathFinder().searchNodePathBeforeCommand(enemyPathPlanner.getHeuristic(), request);
 	}
 
@@ -250,8 +250,8 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		return blocked;
 	}
 
-	private void addAsPossibleNodeToLookIn(final MapGraphNode enemyNode, final MapGraphNode node) {
-		initializePathPlanRequest(enemyNode, node, CLEAN, true);
+	private void addAsPossibleNodeToLookIn(final MapGraphNode enemyNode, final MapGraphNode node, Entity enemy) {
+		initializePathPlanRequest(enemyNode, node, CLEAN, true, enemy);
 		if (GeneralUtils.calculatePath(request, enemyPathPlanner.getPathFinder(), enemyPathPlanner.getHeuristic())) {
 			if (!auxNodesList.contains(node)) {
 				auxNodesList.add(node);
@@ -266,13 +266,13 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 			createSkillFlowerIcon(simpleDecal.get(enemy).getDecal(), iconLookingForTexture);
 		}
 		enemyComponent.setAiStatus(SEARCHING);
-		addPossibleNodesToLookIn(map, map.getNode(characterDecal.get(enemy).getNodePosition(auxVector2_1)));
+		addPossibleNodesToLookIn(map, map.getNode(characterDecal.get(enemy).getNodePosition(auxVector2_1)), enemy);
 		if (!auxNodesList.isEmpty()) {
 			enemyComponent.setTargetLastVisibleNode(auxNodesList.get(MathUtils.random(auxNodesList.size() - 1)));
 		}
 	}
 
-	private void addPossibleNodesToLookIn(MapGraph map, MapGraphNode enemyNode) {
+	private void addPossibleNodesToLookIn(MapGraph map, MapGraphNode enemyNode, Entity enemy) {
 		auxNodesList.clear();
 		int col = enemyNode.getCol();
 		int row = enemyNode.getRow();
@@ -280,14 +280,14 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		int top = Math.max(row - 1, 0);
 		int bottom = Math.min(row + 1, map.getDepth());
 		int right = Math.min(col + 1, map.getWidth() - 1);
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, top));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(col, top));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, top));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, row));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, row));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, bottom));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(col, bottom));
-		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, bottom));
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, top), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(col, top), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, top), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, row), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, row), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(left, bottom), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(col, bottom), enemy);
+		addAsPossibleNodeToLookIn(enemyNode, map.getNode(right, bottom), enemy);
 	}
 
 	@Override
@@ -323,23 +323,27 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 
 	private void initializePathPlanRequest(MapGraphNode destinationNode,
 										   CharacterDecalComponent charDecalComp,
-										   MapGraphConnectionCosts maxCostInclusive) {
+										   MapGraphConnectionCosts maxCostInclusive,
+										   Entity enemy) {
 		initializePathPlanRequest(
 				getSystemsCommonData().getMap().getNode(charDecalComp.getNodePosition(auxVector2_1)),
 				destinationNode,
 				maxCostInclusive,
-				true);
+				true,
+				enemy);
 	}
 
-	private void initializePathPlanRequest(MapGraphNode sourceNode,
-										   MapGraphNode destinationNode,
-										   MapGraphConnectionCosts maxCostInclusive,
-										   boolean avoidCharactersInCalculations) {
+	public void initializePathPlanRequest(MapGraphNode sourceNode,
+										  MapGraphNode destinationNode,
+										  MapGraphConnectionCosts maxCostInclusive,
+										  boolean avoidCharactersInCalculations,
+										  Entity character) {
 		request.setSourceNode(sourceNode);
 		request.setDestNode(destinationNode);
 		request.setOutputPath(enemyPathPlanner.getCurrentPath());
 		request.setAvoidCharactersInCalculations(avoidCharactersInCalculations);
 		request.setMaxCostInclusive(maxCostInclusive);
+		request.setRequester(character);
 	}
 
 	private void applyCommand(final Entity enemy, final CharacterCommands attackPrimary) {
@@ -367,7 +371,7 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		if (enemyNode.equals(targetLastVisibleNode)) {
 			applySearchingModeOnEnemy(enemy);
 		}
-		initializePathPlanRequest(targetLastVisibleNode, characterDecalComp, CLEAN);
+		initializePathPlanRequest(targetLastVisibleNode, characterDecalComp, CLEAN, enemy);
 		if (GeneralUtils.calculatePath(request, enemyPathPlanner.getPathFinder(), enemyPathPlanner.getHeuristic())) {
 			applyCommand(enemy, CharacterCommands.GO_TO_MELEE);
 		} else {
@@ -379,7 +383,7 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 											CharacterDecalComponent characterDecalComp,
 											MapGraphNode targetLastVisibleNode) {
 		boolean foundPath;
-		initializePathPlanRequest(targetLastVisibleNode, characterDecalComp, HEIGHT_DIFF);
+		initializePathPlanRequest(targetLastVisibleNode, characterDecalComp, HEIGHT_DIFF, enemy);
 		foundPath = GeneralUtils.calculatePath(request, enemyPathPlanner.getPathFinder(), enemyPathPlanner.getHeuristic());
 		if (foundPath) {
 			applyCommand(enemy, CharacterCommands.GO_TO_MELEE);
@@ -408,7 +412,6 @@ public class EnemySystem extends GameSystem<EnemySystemEventsSubscriber> impleme
 		float dirToTarget = auxVector2_2.set(targetPos.x, targetPos.z).sub(enemyPos.x, enemyPos.z).nor().angleDeg();
 		return (dirToTarget - fromDeg + 360 + 180) % 360 - 180 + ((toDeg - dirToTarget + 360 + 180) % 360 - 180) < 180;
 	}
-
 
 
 	private boolean checkIfFloorNodesBlockSightToTarget(final Entity enemy) {

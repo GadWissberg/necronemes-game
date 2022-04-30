@@ -1,5 +1,6 @@
 package com.gadarts.necronemes.map;
 
+import com.badlogic.ashley.core.Entity;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +12,7 @@ public class CalculatePathRequest {
 	private boolean avoidCharactersInCalculations;
 	private MapGraphConnectionCosts maxCostInclusive;
 	private MapGraphPath outputPath;
+	private Entity requester;
 
 
 }

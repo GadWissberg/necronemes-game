@@ -16,6 +16,7 @@ public class GamePathFinder extends IndexedAStarPathFinder<MapGraphNode> {
 		map.setIncludeEnemiesInGetConnections(req.isAvoidCharactersInCalculations());
 		map.setCurrentDestination(req.getDestNode());
 		map.setMaxConnectionCostInSearch(req.getMaxCostInclusive());
+		map.setCurrentCharacterPathPlanner(req.getRequester());
 		boolean result = searchNodePath(req.getSourceNode(), req.getDestNode(), heuristic, req.getOutputPath());
 		map.setMaxConnectionCostInSearch(MapGraphConnectionCosts.CLEAN);
 		map.setCurrentDestination(oldDest);

@@ -21,6 +21,7 @@ import com.gadarts.necromine.assets.GameAssetsManager;
 import com.gadarts.necronemes.DefaultGameSettings;
 import com.gadarts.necronemes.GameLifeCycleHandler;
 import com.gadarts.necronemes.SoundPlayer;
+import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.components.mi.GameModelInstance;
 import com.gadarts.necronemes.components.player.Item;
 import com.gadarts.necronemes.console.commands.ConsoleCommandResult;
@@ -200,8 +201,14 @@ public class UserInterfaceSystem extends GameSystem<UserInterfaceSystemEventsSub
 	@Override
 	public void touchDown(final int screenX, final int screenY, final int button) {
 		if (isTouchDisabled()) return;
-		if (button == Input.Buttons.LEFT && getSystemsCommonData().getCurrentCommand() == null) {
-			onUserSelectedNodeToApplyTurn();
+		SystemsCommonData data = getSystemsCommonData();
+		if (button == Input.Buttons.LEFT && data.getCurrentCommand() == null) {
+			GameModelInstance modelInstance = ComponentsMapper.modelInstance.get(data.getCursor()).getModelInstance();
+			Vector3 cursorPos = modelInstance.transform.getTranslation(auxVector3_2);
+			MapGraphNode node = data.getMap().getNode(cursorPos);
+			if (node.getEntity() != null && ComponentsMapper.modelInstance.get(node.getEntity()).getFlatColor() == null) {
+				onUserSelectedNodeToApplyTurn();
+			}
 		}
 	}
 

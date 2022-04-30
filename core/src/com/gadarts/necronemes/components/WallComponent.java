@@ -1,6 +1,5 @@
 package com.gadarts.necronemes.components;
 
-import com.gadarts.necromine.model.map.MapNodeData;
 import com.gadarts.necronemes.map.MapGraphNode;
 import lombok.Getter;
 

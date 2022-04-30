@@ -83,10 +83,10 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		for (int dir = 0; dir < 360; dir += LOS_CHECK_DELTA) {
 			revealNodes(map, playerPos, playerNode, dir);
 		}
-		calculateFogOfWarEdges(playerNode, map);
+		calculateFogOfWarEdgesForFloor(playerNode, map);
 	}
 
-	private void calculateFogOfWarEdges(MapGraphNode node, MapGraph map) {
+	private void calculateFogOfWarEdgesForFloor(MapGraphNode node, MapGraph map) {
 		int nodeRow = node.getRow();
 		int nodeCol = node.getCol();
 		float half = LOS_MAX / 2;
@@ -269,19 +269,21 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 		CharacterDecalComponent characterDecalComponent = characterDecal.get(character);
 		Vector2 cellPosition = characterDecalComponent.getNodePosition(auxVector2_1);
 		MapGraphNode destNode = getSystemsCommonData().getMap().getNode((int) cellPosition.x, (int) cellPosition.y);
-		initializePathPlanRequest(sourceNode, destNode, maxCostPerNodeConnection, avoidCharactersInCalculation);
+		initializePathPlanRequest(sourceNode, destNode, maxCostPerNodeConnection, avoidCharactersInCalculation, playerPathPlanner.getCurrentPath());
 		return playerPathPlanner.getPathFinder().searchNodePathBeforeCommand(playerPathPlanner.getHeuristic(), request);
 	}
 
 	private void initializePathPlanRequest(MapGraphNode sourceNode,
 										   MapGraphNode destinationNode,
 										   MapGraphConnectionCosts maxCostInclusive,
-										   boolean avoidCharactersInCalculations) {
+										   boolean avoidCharactersInCalculations,
+										   MapGraphPath outputPath) {
 		request.setSourceNode(sourceNode);
 		request.setDestNode(destinationNode);
-		request.setOutputPath(playerPathPlanner.getCurrentPath());
+		request.setOutputPath(outputPath);
 		request.setAvoidCharactersInCalculations(avoidCharactersInCalculations);
 		request.setMaxCostInclusive(maxCostInclusive);
+		request.setRequester(getSystemsCommonData().getPlayer());
 	}
 
 	private boolean calculatePathAccordingToSelection(final MapGraphNode cursorNode, Entity enemyAtNode) {
@@ -303,11 +305,12 @@ public class PlayerSystem extends GameSystem<PlayerSystemEventsSubscriber> imple
 	private void initializePathPlanRequest(MapGraphNode cursorNode,
 										   CharacterDecalComponent charDecalComp,
 										   MapGraphPath plannedPath) {
-		request.setSourceNode(getSystemsCommonData().getMap().getNode(charDecalComp.getNodePosition(auxVector2_1)));
-		request.setDestNode(cursorNode);
-		request.setOutputPath(plannedPath);
-		request.setAvoidCharactersInCalculations(true);
-		request.setMaxCostInclusive(CLEAN);
+		initializePathPlanRequest(
+				getSystemsCommonData().getMap().getNode(charDecalComp.getNodePosition(auxVector2_1)),
+				cursorNode,
+				CLEAN,
+				true,
+				plannedPath);
 	}
 
 	private void applyPlayerCommandAccordingToPlan(MapGraphNode cursorNode, AttackNodesHandler attackNodesHandler) {

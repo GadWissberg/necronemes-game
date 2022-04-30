@@ -1,5 +1,6 @@
 package com.gadarts.necronemes.systems.ui;
 
+import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -10,6 +11,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Disposable;
 import com.gadarts.necronemes.DefaultGameSettings;
+import com.gadarts.necronemes.components.ComponentsMapper;
 import com.gadarts.necronemes.map.MapGraphNode;
 import com.gadarts.necronemes.systems.SystemsCommonData;
 import lombok.Getter;
@@ -68,9 +70,14 @@ public class CursorHandler implements Disposable {
 		}
 	}
 
-	void colorizeCursor( ) {
-		setCursorOpacity(1F);
-		setCursorColor(CURSOR_REGULAR);
+	void colorizeCursor(MapGraphNode node) {
+		Entity nodeEntity = node.getEntity();
+		if (nodeEntity != null && modelInstance.get(nodeEntity).getFlatColor() == null) {
+			setCursorOpacity(1F);
+			setCursorColor(CURSOR_REGULAR);
+		} else {
+			setCursorColor(CURSOR_UNAVAILABLE);
+		}
 	}
 
 	private void setCursorOpacity(final float opacity) {
@@ -93,7 +100,7 @@ public class CursorHandler implements Disposable {
 		int col = newNode.getCol();
 		int row = newNode.getRow();
 		getCursorModelInstance().transform.setTranslation(col + 0.5f, newNode.getHeight(), row + 0.5f);
-		colorizeCursor();
+		colorizeCursor(newNode);
 		if (cursorCellPositionLabel != null) {
 			cursorCellPositionLabel.setText(String.format(POSITION_LABEL_FORMAT, row, col));
 		}
